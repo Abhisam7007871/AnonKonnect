@@ -12,8 +12,19 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/feather-icons"></script>
 
-    <!-- Vercel Web Analytics -->
-    <script defer src="/_vercel/insights/script.js"></script>
+    <!-- Vercel Web Analytics: load ONLY on Vercel; never on Render (avoids 404 + MIME error) -->
+    <script>
+      (function() {
+        var h = (window.location.hostname || '').toLowerCase();
+        var isVercel = (h.includes('vercel.app') || h.endsWith('.vercel.app')) && !h.includes('onrender.com');
+        if (isVercel) {
+          var s = document.createElement('script');
+          s.defer = true;
+          s.src = '/_vercel/insights/script.js';
+          document.head.appendChild(s);
+        }
+      })();
+    </script>
 </head>
 
 <body>
@@ -24,7 +35,7 @@
     <nav class="navbar" id="navbar">
         <div class="nav-container">
             <div class="logo">
-                <img src="logo.png" alt="AnonKonnect Logo" style="height: 32px; width: auto; margin-right: 8px;">
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect fill='%236366f1' width='32' height='32' rx='6'/%3E%3Ctext x='16' y='22' font-size='14' font-weight='bold' fill='white' text-anchor='middle' font-family='system-ui,sans-serif'%3EAK%3C/text%3E%3C/svg%3E" alt="AnonKonnect Logo" style="height: 32px; width: auto; margin-right: 8px;">
                 <span>AnonKonnect</span>
             </div>
             <div class="nav-links">
@@ -430,7 +441,7 @@
             <div class="footer-container">
                 <div class="footer-brand">
                     <div class="logo">
-                        <img src="logo.png" alt="AnonKonnect Logo"
+                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect fill='%236366f1' width='32' height='32' rx='6'/%3E%3Ctext x='16' y='22' font-size='14' font-weight='bold' fill='white' text-anchor='middle' font-family='system-ui,sans-serif'%3EAK%3C/text%3E%3C/svg%3E" alt="AnonKonnect Logo"
                             style="height: 32px; width: auto; margin-right: 8px;"> <span
                             class="brand-text">AnonKonnect</span>
                     </div>
@@ -509,7 +520,7 @@
             <div id="chatContainer" class="chat-wrapper glass-panel">
                 <div class="chat-header">
                     <div class="peer-status-block">
-                        <img src="logo.png" alt="AnonKonnect Logo" class="header-logo">
+                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect fill='%236366f1' width='32' height='32' rx='6'/%3E%3Ctext x='16' y='22' font-size='14' font-weight='bold' fill='white' text-anchor='middle' font-family='system-ui,sans-serif'%3EAK%3C/text%3E%3C/svg%3E" alt="AnonKonnect Logo" class="header-logo">
                         <div>
                             <h3 id="peerName"><span class="brand-text" style="font-size: 18px;">AnonKonnect</span></h3>
                             <span class="status-indicator">Online</span>

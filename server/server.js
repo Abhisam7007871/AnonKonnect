@@ -23,14 +23,17 @@ app.use(limiter);
 
 const server = http.createServer(app);
 
-// CORS: Allow Vercel frontend in production
+// CORS: Allow frontend(s) – use comma-separated FRONTEND_URL for Vercel + Render (e.g. "https://app.vercel.app,https://anonkonnect.onrender.com")
 const ALLOWED_ORIGINS = process.env.FRONTEND_URL
-    ? [process.env.FRONTEND_URL]
+    ? process.env.FRONTEND_URL.split(',').map(s => s.trim()).filter(Boolean)
     : ['*'];
+const CORS_ORIGIN = ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS[0] === '*'
+    ? '*'
+    : (origin, cb) => (ALLOWED_ORIGINS.includes(origin) ? cb(null, true) : cb(null, false));
 
 const io = new Server(server, {
     cors: {
-        origin: ALLOWED_ORIGINS[0] === '*' ? '*' : ALLOWED_ORIGINS,
+        origin: CORS_ORIGIN,
         methods: ['GET', 'POST']
     }
 });

@@ -36,6 +36,9 @@ document.addEventListener('DOMContentLoaded', () => {
     chatScreen = document.getElementById('chatScreen');
     mediaContainer = document.getElementById('mediaContainer');
 
+    // Start with Start button disabled until signaling is connected
+    const startBtn = document.getElementById('startChatBtn');
+    if (startBtn) startBtn.disabled = true;
     // Connect to signaling server
     connectToServer();
 });
@@ -106,17 +109,26 @@ function connectToServer() {
         ? 'http://localhost:3000'
         : 'https://anonkonnect-server.onrender.com'; // Replace with your actual Render URL
 
+    // #region agent log
+    const _hostname = window.location.hostname;
+    const _origin = window.location.origin;
+    fetch('http://127.0.0.1:7626/ingest/aec485ed-3800-4bdd-96c5-3b55a8f6fa64',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'5c1abb'},body:JSON.stringify({sessionId:'5c1abb',location:'app.js:connectToServer',message:'signaling connection attempt',data:{signalingUrl,hostname:_hostname,origin:_origin},timestamp:Date.now(),hypothesisId:'H4'})}).catch(()=>{});
+    // #endregion
+
     console.log(`[CLIENT] Connecting to signaling server: ${signalingUrl}`);
     socket = io(signalingUrl, {
         transports: ['websocket', 'polling'], // Prefer WebSocket, fallback to polling
         reconnection: true,
-        reconnectionAttempts: 10,
+        reconnectionAttempts: 15,
         reconnectionDelay: 1000,
         reconnectionDelayMax: 5000,
-        timeout: 20000
+        timeout: 45000 // Allow time for Render cold start (~30–60s on free tier)
     });
 
     socket.on('connect', () => {
+        // #region agent log
+        fetch('http://127.0.0.1:7626/ingest/aec485ed-3800-4bdd-96c5-3b55a8f6fa64',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'5c1abb'},body:JSON.stringify({sessionId:'5c1abb',location:'app.js:connect',message:'signaling connected',data:{},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
+        // #endregion
         console.log('[CLIENT] Connected to signaling server');
         updateConnectionStatus(true);
     });
@@ -126,7 +138,17 @@ function connectToServer() {
         console.log('[CLIENT] Assigned User ID:', userId);
     });
 
-    socket.on('disconnect', () => {
+    socket.on('connect_error', (err) => {
+        // #region agent log
+        fetch('http://127.0.0.1:7626/ingest/aec485ed-3800-4bdd-96c5-3b55a8f6fa64',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'5c1abb'},body:JSON.stringify({sessionId:'5c1abb',location:'app.js:connect_error',message:'signaling connect_error',data:{message:err?.message||String(err),type:err?.type},timestamp:Date.now(),hypothesisId:'H5'})}).catch(()=>{});
+        // #endregion
+        console.error('[CLIENT] Signaling connect_error:', err?.message || err);
+        updateConnectionStatus(false, 'Connection failed – retrying…');
+    });
+    socket.on('disconnect', (reason) => {
+        // #region agent log
+        fetch('http://127.0.0.1:7626/ingest/aec485ed-3800-4bdd-96c5-3b55a8f6fa64',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'5c1abb'},body:JSON.stringify({sessionId:'5c1abb',location:'app.js:disconnect',message:'signaling disconnected',data:{reason:reason||'unknown'},timestamp:Date.now(),hypothesisId:'H3'})}).catch(()=>{});
+        // #endregion
         console.log('[CLIENT] Disconnected from signaling server');
         updateConnectionStatus(false);
     });
@@ -176,14 +198,17 @@ function connectToServer() {
     });
 }
 
-function updateConnectionStatus(connected) {
+function updateConnectionStatus(connected, disconnectMessage) {
     const statusEl = document.getElementById('connectionStatus');
+    const startBtn = document.getElementById('startChatBtn');
     if (connected) {
         statusEl.classList.add('connected');
         statusEl.innerHTML = '<span class="dot"></span> Connected';
+        if (startBtn) startBtn.disabled = false;
     } else {
         statusEl.classList.remove('connected');
-        statusEl.innerHTML = '<span class="dot"></span> Disconnected';
+        statusEl.innerHTML = '<span class="dot"></span> ' + (disconnectMessage || 'Disconnected');
+        if (startBtn) startBtn.disabled = true;
     }
 }
 
@@ -204,6 +229,13 @@ function handleInfoSubmit(event) {
     }
 
     currentMode = mode;
+
+    // #region agent log
+    const _hasSocket = !!socket;
+    const _connected = socket ? !!socket.connected : false;
+    const _timeSinceLoad = typeof performance !== 'undefined' && performance.timing ? Date.now() - performance.timing.navigationStart : -1;
+    fetch('http://127.0.0.1:7626/ingest/aec485ed-3800-4bdd-96c5-3b55a8f6fa64',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'5c1abb'},body:JSON.stringify({sessionId:'5c1abb',location:'app.js:handleInfoSubmit',message:'submit connection check',data:{hasSocket:_hasSocket,socketConnected:_connected,timeSinceLoadMs:_timeSinceLoad},timestamp:Date.now(),hypothesisId:'H2'})}).catch(()=>{});
+    // #endregion
 
     if (!socket || !socket.connected) {
         alert("Not connected to signaling server. Please try again.");
@@ -228,8 +260,9 @@ function selectMode(mode, element) {
     });
     element.classList.add('selected');
 
-    // Enable submit button
-    document.getElementById('startChatBtn').disabled = false;
+    // Enable submit button only when signaling is connected
+    const startBtn = document.getElementById('startChatBtn');
+    if (startBtn) startBtn.disabled = !(socket && socket.connected);
 }
 
 async function requestMediaPermissions(mode) {
