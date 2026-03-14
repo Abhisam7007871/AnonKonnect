@@ -112,7 +112,7 @@ function connectToServer() {
     // #region agent log
     const _hostname = window.location.hostname;
     const _origin = window.location.origin;
-    fetch('http://127.0.0.1:7626/ingest/aec485ed-3800-4bdd-96c5-3b55a8f6fa64',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'5c1abb'},body:JSON.stringify({sessionId:'5c1abb',location:'app.js:connectToServer',message:'signaling connection attempt',data:{signalingUrl,hostname:_hostname,origin:_origin},timestamp:Date.now(),hypothesisId:'H4'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7626/ingest/aec485ed-3800-4bdd-96c5-3b55a8f6fa64', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '5c1abb' }, body: JSON.stringify({ sessionId: '5c1abb', location: 'app.js:connectToServer', message: 'signaling connection attempt', data: { signalingUrl, hostname: _hostname, origin: _origin }, timestamp: Date.now(), hypothesisId: 'H4' }) }).catch(() => { });
     // #endregion
 
     console.log(`[CLIENT] Connecting to signaling server: ${signalingUrl}`);
@@ -127,7 +127,7 @@ function connectToServer() {
 
     socket.on('connect', () => {
         // #region agent log
-        fetch('http://127.0.0.1:7626/ingest/aec485ed-3800-4bdd-96c5-3b55a8f6fa64',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'5c1abb'},body:JSON.stringify({sessionId:'5c1abb',location:'app.js:connect',message:'signaling connected',data:{},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7626/ingest/aec485ed-3800-4bdd-96c5-3b55a8f6fa64', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '5c1abb' }, body: JSON.stringify({ sessionId: '5c1abb', location: 'app.js:connect', message: 'signaling connected', data: {}, timestamp: Date.now(), hypothesisId: 'H1' }) }).catch(() => { });
         // #endregion
         console.log('[CLIENT] Connected to signaling server');
         updateConnectionStatus(true);
@@ -140,14 +140,14 @@ function connectToServer() {
 
     socket.on('connect_error', (err) => {
         // #region agent log
-        fetch('http://127.0.0.1:7626/ingest/aec485ed-3800-4bdd-96c5-3b55a8f6fa64',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'5c1abb'},body:JSON.stringify({sessionId:'5c1abb',location:'app.js:connect_error',message:'signaling connect_error',data:{message:err?.message||String(err),type:err?.type},timestamp:Date.now(),hypothesisId:'H5'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7626/ingest/aec485ed-3800-4bdd-96c5-3b55a8f6fa64', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '5c1abb' }, body: JSON.stringify({ sessionId: '5c1abb', location: 'app.js:connect_error', message: 'signaling connect_error', data: { message: err?.message || String(err), type: err?.type }, timestamp: Date.now(), hypothesisId: 'H5' }) }).catch(() => { });
         // #endregion
         console.error('[CLIENT] Signaling connect_error:', err?.message || err);
         updateConnectionStatus(false, 'Connection failed – retrying…');
     });
     socket.on('disconnect', (reason) => {
         // #region agent log
-        fetch('http://127.0.0.1:7626/ingest/aec485ed-3800-4bdd-96c5-3b55a8f6fa64',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'5c1abb'},body:JSON.stringify({sessionId:'5c1abb',location:'app.js:disconnect',message:'signaling disconnected',data:{reason:reason||'unknown'},timestamp:Date.now(),hypothesisId:'H3'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7626/ingest/aec485ed-3800-4bdd-96c5-3b55a8f6fa64', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '5c1abb' }, body: JSON.stringify({ sessionId: '5c1abb', location: 'app.js:disconnect', message: 'signaling disconnected', data: { reason: reason || 'unknown' }, timestamp: Date.now(), hypothesisId: 'H3' }) }).catch(() => { });
         // #endregion
         console.log('[CLIENT] Disconnected from signaling server');
         updateConnectionStatus(false);
@@ -234,7 +234,7 @@ function handleInfoSubmit(event) {
     const _hasSocket = !!socket;
     const _connected = socket ? !!socket.connected : false;
     const _timeSinceLoad = typeof performance !== 'undefined' && performance.timing ? Date.now() - performance.timing.navigationStart : -1;
-    fetch('http://127.0.0.1:7626/ingest/aec485ed-3800-4bdd-96c5-3b55a8f6fa64',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'5c1abb'},body:JSON.stringify({sessionId:'5c1abb',location:'app.js:handleInfoSubmit',message:'submit connection check',data:{hasSocket:_hasSocket,socketConnected:_connected,timeSinceLoadMs:_timeSinceLoad},timestamp:Date.now(),hypothesisId:'H2'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7626/ingest/aec485ed-3800-4bdd-96c5-3b55a8f6fa64', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '5c1abb' }, body: JSON.stringify({ sessionId: '5c1abb', location: 'app.js:handleInfoSubmit', message: 'submit connection check', data: { hasSocket: _hasSocket, socketConnected: _connected, timeSinceLoadMs: _timeSinceLoad }, timestamp: Date.now(), hypothesisId: 'H2' }) }).catch(() => { });
     // #endregion
 
     if (!socket || !socket.connected) {
@@ -381,13 +381,39 @@ async function handleMatchFound(data) {
         isChatOpen = false;
 
         if (data.mode === 'audio') {
-            // Optional: Hide video wrappers but keep audio tracks
             document.querySelectorAll('.video-wrapper').forEach(el => el.style.background = '#2d3748');
+        }
+
+        // Reset overlay for new session
+        const overlay = document.getElementById('remoteMediaState');
+        if (overlay) {
+            overlay.style.display = 'flex';
+            overlay.textContent = 'Waiting for partner...';
         }
     } else {
         mediaContainer.classList.add('hidden');
         chatLayout.classList.remove('has-media');
         chatContainer.classList.remove('chat-collapsed');
+    }
+
+    // ISSUE 3 FIX: Show/hide toolbar buttons based on mode
+    const toolMic = document.getElementById('tool-mic');
+    const toolCam = document.getElementById('tool-cam');
+    const toolChat = document.getElementById('tool-chat');
+    const chatToggleBtn = document.getElementById('chatToggleBtn');
+
+    if (data.mode === 'text') {
+        // Text mode: hide media controls
+        if (toolMic) toolMic.style.display = 'none';
+        if (toolCam) toolCam.style.display = 'none';
+        if (toolChat) toolChat.style.display = 'none';
+        if (chatToggleBtn) chatToggleBtn.style.display = 'none';
+    } else {
+        // Audio/Video mode: show all controls
+        if (toolMic) toolMic.style.display = '';
+        if (toolCam) toolCam.style.display = data.mode === 'video' ? '' : 'none';
+        if (toolChat) toolChat.style.display = '';
+        if (chatToggleBtn) chatToggleBtn.style.display = '';
     }
 
     showChatScreen();
@@ -396,26 +422,35 @@ async function handleMatchFound(data) {
 async function initializeWebRTC(data) {
     const configuration = {
         iceServers: data.iceServers.iceServers,
-        iceCandidatePoolSize: data.iceServers.iceCandidatePoolSize
+        iceCandidatePoolSize: data.iceServers.iceCandidatePoolSize || 10
     };
 
     peerConnection = new RTCPeerConnection(configuration);
+    console.log('[CLIENT] RTCPeerConnection created');
 
-    // Add local stream if available
+    // Add local stream IMMEDIATELY for fastest negotiation
     if (localStream) {
         localStream.getTracks().forEach(track => {
             peerConnection.addTrack(track, localStream);
         });
+        console.log('[CLIENT] Local tracks added to peer connection');
     }
 
-    // Handle incoming tracks
+    // ── ISSUE 1 & 2 FIX: Handle incoming tracks + HIDE OVERLAY ──
     peerConnection.ontrack = (event) => {
+        console.log('[CLIENT] Remote track received:', event.track.kind);
         if (remoteVideo && event.streams[0]) {
             remoteVideo.srcObject = event.streams[0];
         }
+        // CRITICAL: Hide "Waiting for partner" overlay when remote stream arrives
+        const overlay = document.getElementById('remoteMediaState');
+        if (overlay) {
+            overlay.style.display = 'none';
+            console.log('[CLIENT] Overlay hidden — remote stream active');
+        }
     };
 
-    // Handle ICE candidates
+    // ── Trickle ICE: Send candidates IMMEDIATELY (don't wait for gathering) ──
     peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
             socket.emit('ice-candidate', {
@@ -426,24 +461,36 @@ async function initializeWebRTC(data) {
         }
     };
 
-    // Handle connection state changes
-    peerConnection.onconnectionstatechange = () => {
-        console.log('Connection state:', peerConnection.connectionState);
+    // ── ICE connection state tracking (fast failure detection) ──
+    peerConnection.oniceconnectionstatechange = () => {
+        const state = peerConnection.iceConnectionState;
+        console.log('[CLIENT] ICE state:', state);
         if (peerStatusEl) {
-            peerStatusEl.textContent = peerConnection.connectionState;
+            const labels = { checking: 'Connecting…', connected: 'Connected', completed: 'Connected', failed: 'Failed', disconnected: 'Reconnecting…' };
+            peerStatusEl.textContent = labels[state] || state;
+        }
+        if (state === 'connected' || state === 'completed') {
+            const overlay = document.getElementById('remoteMediaState');
+            if (overlay) overlay.style.display = 'none';
         }
     };
 
-    // If initiator, create offer
-    if (data.initiator) {
-        const offer = await peerConnection.createOffer();
-        await peerConnection.setLocalDescription(offer);
+    // ── Connection state for UI ──
+    peerConnection.onconnectionstatechange = () => {
+        console.log('[CLIENT] Connection state:', peerConnection.connectionState);
+    };
 
+    // ── If initiator, create and send offer IMMEDIATELY ──
+    if (data.initiator) {
+        const offer = await peerConnection.createOffer({ iceRestart: true });
+        await peerConnection.setLocalDescription(offer);
+        // Send offer instantly (trickle ICE — don't wait for ICE gathering to finish)
         socket.emit('offer', {
             to: currentPeerId,
             offer: peerConnection.localDescription,
             sessionId: currentSessionId
         });
+        console.log('[CLIENT] Offer sent immediately (trickle ICE)');
     }
 }
 
