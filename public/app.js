@@ -380,11 +380,16 @@ async function handleMatchFound(data) {
         chatLayout.classList.add(`${data.mode}-mode`);
     }
 
+    const sessionTopBar = document.getElementById('sessionTopBar');
+    const sessionTopBarPeerName = document.getElementById('sessionTopBarPeerName');
+
     if (data.mode === 'video' || data.mode === 'audio') {
         mediaContainer.classList.remove('hidden');
         chatLayout.classList.add('has-media');
         chatContainer.classList.add('chat-collapsed');
         isChatOpen = false;
+        if (sessionTopBar) sessionTopBar.classList.remove('hidden');
+        if (sessionTopBarPeerName) sessionTopBarPeerName.textContent = data.peerPreferences?.nickname || 'Stranger';
 
         if (data.mode === 'audio') {
             document.querySelectorAll('.video-wrapper').forEach(el => el.style.background = '#2d3748');
@@ -400,6 +405,7 @@ async function handleMatchFound(data) {
         mediaContainer.classList.add('hidden');
         chatLayout.classList.remove('has-media');
         chatContainer.classList.remove('chat-collapsed');
+        if (sessionTopBar) sessionTopBar.classList.add('hidden');
     }
 
     // ISSUE 3 FIX: Show/hide toolbar buttons based on mode
@@ -442,13 +448,20 @@ async function initializeWebRTC(data) {
         console.log('[CLIENT] Local tracks added to peer connection');
     }
 
-    // ── ISSUE 1 & 2 FIX: Handle incoming tracks + HIDE OVERLAY ──
+    // ── Handle incoming tracks: video + audio playback (audio element for reliable remote audio) ──
     peerConnection.ontrack = (event) => {
         console.log('[CLIENT] Remote track received:', event.track.kind);
-        if (remoteVideo && event.streams[0]) {
-            remoteVideo.srcObject = event.streams[0];
+        const stream = event.streams[0];
+        if (!stream) return;
+        if (remoteVideo) {
+            remoteVideo.srcObject = stream;
+            remoteVideo.play().catch(() => {});
         }
-        // CRITICAL: Hide "Waiting for partner" overlay when remote stream arrives
+        const remoteAudioEl = document.getElementById('remoteAudio');
+        if (remoteAudioEl) {
+            remoteAudioEl.srcObject = stream;
+            remoteAudioEl.play().catch(() => {});
+        }
         const overlay = document.getElementById('remoteMediaState');
         if (overlay) {
             overlay.style.display = 'none';
@@ -791,6 +804,11 @@ function fullyCleanupSession() {
     // 3. Clear UI & Video
     if (localVideo) localVideo.srcObject = null;
     if (remoteVideo) remoteVideo.srcObject = null;
+    const remoteAudioEl = document.getElementById('remoteAudio');
+    if (remoteAudioEl) remoteAudioEl.srcObject = null;
+
+    const sessionTopBar = document.getElementById('sessionTopBar');
+    if (sessionTopBar) sessionTopBar.classList.add('hidden');
 
     messagesContainer.innerHTML = '<div class="system-message info">You are now chatting with a random stranger. Say hi!</div>';
     typingIndicator.textContent = '';

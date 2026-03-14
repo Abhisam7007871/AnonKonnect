@@ -1343,6 +1343,59 @@ body {
     margin-top: 30px;
 }
 
+/* Remote audio element: playback only, visually hidden */
+.remote-audio-element {
+    position: absolute;
+    width: 0;
+    height: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Session top bar: Skip/Leave/Chat always visible in video/audio mode (outside collapsed chat) */
+.session-top-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 3100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    padding-top: calc(12px + env(safe-area-inset-top, 0));
+    background: rgba(11, 15, 25, 0.92);
+    backdrop-filter: blur(15px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.session-top-bar.hidden {
+    display: none;
+}
+
+.session-top-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.session-top-bar-logo {
+    height: 36px;
+    width: auto;
+}
+
+.session-top-bar-peer {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary, #fff);
+}
+
+.session-top-bar-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
 /* Chat Layout */
 .chat-layout {
     width: 100%;
@@ -1353,9 +1406,15 @@ body {
     padding: 20px;
 }
 
+/* When session top bar is visible (video/audio), add top padding so content is not under the bar */
+.chat-layout.has-media {
+    padding-top: 60px;
+}
+
 .media-container {
     flex: 1;
     overflow: hidden;
+    min-height: 0;
 }
 
 .video-grid {
@@ -1417,6 +1476,8 @@ video {
     flex: 1;
     display: flex;
     flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
     transition: width 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
 }
 
@@ -1440,10 +1501,12 @@ video {
         right: 0;
         top: 0;
         height: 100vh;
+        height: 100dvh;
         z-index: 3000;
         width: 85%;
         background: rgba(11, 15, 25, 0.98);
         backdrop-filter: blur(20px);
+        overflow-y: auto;
     }
 }
 
@@ -1840,20 +1903,31 @@ emoji-picker {
     .chat-layout {
         flex-direction: column;
         height: 100vh;
+        height: 100dvh;
+        overflow: hidden;
         padding: 0;
         gap: 0;
     }
 
+    .chat-layout.has-media {
+        padding-top: 56px;
+    }
+
     .chat-wrapper {
         height: 60vh;
+        min-height: 0;
         border-radius: 0;
         border: none;
+        overflow: hidden;
     }
 
     .media-container {
         height: 40vh;
+        min-height: 0;
+        flex: none;
         border-radius: 0;
         border: none;
+        overflow: hidden;
     }
 
     .floating-exit {

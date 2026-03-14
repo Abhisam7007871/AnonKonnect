@@ -35,8 +35,7 @@
     <nav class="navbar" id="navbar">
         <div class="nav-container">
             <div class="logo">
-                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect fill='%236366f1' width='32' height='32' rx='6'/%3E%3Ctext x='16' y='22' font-size='14' font-weight='bold' fill='white' text-anchor='middle' font-family='system-ui,sans-serif'%3EAK%3C/text%3E%3C/svg%3E"
-                    alt="AnonKonnect Logo" class="brand-logo-main">
+                <img src="logo.png" alt="AnonKonnect Logo" class="brand-logo-main">
                 <span>AnonKonnect</span>
             </div>
             <div class="nav-links">
@@ -442,8 +441,7 @@
             <div class="footer-container">
                 <div class="footer-brand">
                     <div class="logo">
-                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect fill='%236366f1' width='32' height='32' rx='6'/%3E%3Ctext x='16' y='22' font-size='14' font-weight='bold' fill='white' text-anchor='middle' font-family='system-ui,sans-serif'%3EAK%3C/text%3E%3C/svg%3E"
-                            alt="AnonKonnect Logo" class="brand-logo-footer"> <span
+                        <img src="logo.png" alt="AnonKonnect Logo" class="brand-logo-footer"> <span
                             class="brand-text">AnonKonnect</span>
                     </div>
                     <p>Anonymous chat platform built for fast and secure connections.</p>
@@ -502,6 +500,25 @@
     <div id="chatScreen" class="app-screen hidden fullscreen">
         <div class="chat-layout">
 
+            <!-- Session top bar: Skip/Leave/Chat always visible in video/audio mode (not hidden when chat collapsed) -->
+            <div id="sessionTopBar" class="session-top-bar hidden">
+                <div class="session-top-bar-left">
+                    <img src="logo.png" alt="Logo" class="header-logo session-top-bar-logo">
+                    <span id="sessionTopBarPeerName" class="session-top-bar-peer">Stranger</span>
+                </div>
+                <div class="session-top-bar-actions">
+                    <button class="tool-btn-header skip-glow" onclick="skipUser()">
+                        <i class="ph-bold ph-fast-forward"></i> SKIP
+                    </button>
+                    <button class="tool-btn-header danger" onclick="exitToHome()">
+                        <i class="ph-bold ph-sign-out"></i> LEAVE
+                    </button>
+                    <button class="icon-btn text-brand" onclick="toggleChatPanel()" title="Toggle Chat Panel">
+                        <i class="ph-fill ph-chat-centered-text"></i> CHAT
+                    </button>
+                </div>
+            </div>
+
             <!-- A/V Area (SDE-4 Upgrade: Side-by-Side Grid) -->
             <div id="mediaContainer" class="media-container hidden glass-panel">
                 <div class="video-grid-premium">
@@ -511,6 +528,7 @@
                     </div>
                     <div class="video-item remote">
                         <video id="remoteVideo" autoplay playsinline></video>
+                        <audio id="remoteAudio" autoplay playsinline class="remote-audio-element"></audio>
                         <div class="v-label" id="remoteLabel">Stranger</div>
                         <div class="media-overlay" id="remoteMediaState">Waiting for partner...</div>
                     </div>
@@ -521,8 +539,7 @@
             <div id="chatContainer" class="chat-wrapper glass-panel">
                 <div class="chat-header">
                     <div class="peer-status-block">
-                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect fill='%236366f1' width='32' height='32' rx='6'/%3E%3Ctext x='16' y='22' font-size='14' font-weight='bold' fill='white' text-anchor='middle' font-family='system-ui,sans-serif'%3EAK%3C/text%3E%3C/svg%3E"
-                            alt="AnonKonnect Logo" class="header-logo">
+                        <img src="logo.png" alt="AnonKonnect Logo" class="header-logo">
                         <div>
                             <h3 id="peerName"><span class="brand-text" style="font-size: 18px;">AnonKonnect</span></h3>
                             <span class="status-indicator">Online</span>
