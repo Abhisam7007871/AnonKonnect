@@ -1,5 +1,43 @@
 # Deployment checklist (Vercel + Render)
 
+## Fix backend 404/CORS: Render dashboard steps (do this first)
+
+The backend at **anonkonnect-server.onrender.com** must be a **Web Service** that runs the Node server. If you get 404 + CORS on `/socket.io/`, that service is not running Node.
+
+**Option A – Change the existing "anonkonnect-server" service**
+
+1. Go to [dashboard.render.com](https://dashboard.render.com) and open the service whose URL is **anonkonnect-server.onrender.com**.
+2. Go to **Settings** (left sidebar).
+3. Check **Service Type**. If it says **Static Site**, you cannot convert it; use Option B.
+4. If it is **Web Service**, set:
+   - **Build Command:** `npm install`
+   - **Start Command:** `npm start`
+   - **Root Directory:** leave **empty**
+5. Click **Save Changes**, then **Manual Deploy** → **Deploy latest commit**.
+6. Wait for the deploy to finish (Logs should show "AnonKonnect Server running on port ...").
+7. Open **https://anonkonnect-server.onrender.com/health** — you should see `{"status":"ok",...}`.
+
+**Option B – Create a new Web Service (if the current one is Static Site)**
+
+1. In Render dashboard, click **New +** → **Web Service**.
+2. Connect your **anonkonnect** repo (same as the frontend).
+3. Use:
+   - **Name:** `anonkonnect-server` (or any name; you’ll use the new URL in the frontend).
+   - **Region:** your choice.
+   - **Branch:** `main` (or your default).
+   - **Runtime:** **Node**.
+   - **Build Command:** `npm install`
+   - **Start Command:** `npm start`
+   - **Root Directory:** leave **empty**.
+4. Under **Environment**, add **FRONTEND_URL** = `https://anonkonnect.onrender.com` (or leave it unset to allow all origins).
+5. Click **Create Web Service** and wait for the first deploy.
+6. Copy the service URL (e.g. `https://anonkonnect-server.onrender.com` or a new one).
+7. If the URL is different from before, update the frontend: in `public/app.js` set the signaling URL to the new backend URL (search for `anonkonnect-server.onrender.com` and replace with your new URL), then redeploy the frontend.
+
+After the backend is a Web Service and deploy succeeds, **https://anonkonnect-server.onrender.com/health** must return JSON. Then `/socket.io/` will work and CORS will be handled by the server.
+
+---
+
 ## Backend returns 404 for /socket.io/ (and CORS error)
 
 If you see **404 (Not Found)** on `https://anonkonnect-server.onrender.com/socket.io/` and "No 'Access-Control-Allow-Origin' header", the backend URL is **not** running this Node.js app. The request never reaches Socket.IO, so you get a 404 (and no CORS headers).
