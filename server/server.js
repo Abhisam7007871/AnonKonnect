@@ -27,9 +27,10 @@ const server = http.createServer(app);
 const ALLOWED_ORIGINS = process.env.FRONTEND_URL
     ? process.env.FRONTEND_URL.split(',').map(s => s.trim()).filter(Boolean)
     : ['*'];
+// Allow when origin is in list, or when origin is missing (e.g. WebSocket upgrade from some clients/proxies)
 const CORS_ORIGIN = ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS[0] === '*'
     ? '*'
-    : (origin, cb) => (ALLOWED_ORIGINS.includes(origin) ? cb(null, true) : cb(null, false));
+    : (origin, cb) => cb(null, origin == null || ALLOWED_ORIGINS.includes(origin));
 
 const io = new Server(server, {
     cors: {

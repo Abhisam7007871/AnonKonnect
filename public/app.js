@@ -117,7 +117,7 @@ function connectToServer() {
 
     console.log(`[CLIENT] Connecting to signaling server: ${signalingUrl}`);
     socket = io(signalingUrl, {
-        transports: ['websocket', 'polling'], // Prefer WebSocket, fallback to polling
+        transports: ['polling', 'websocket'], // Try polling first (works when WebSocket is blocked e.g. Render/proxy)
         reconnection: true,
         reconnectionAttempts: 15,
         reconnectionDelay: 1000,
@@ -725,14 +725,20 @@ function escapeHtml(unsafe) {
 // RICH CHAT FEATURES
 // ==========================================
 
-// 1. Emoji Picker
-const emojiPicker = document.querySelector('emoji-picker');
-if (emojiPicker) {
-    emojiPicker.addEventListener('emoji-click', event => {
-        messageInput.value += event.detail.unicode;
-        toggleEmojiPicker();
+// 1. Emoji Picker (loaded dynamically to avoid ESM database.js default-export error on some hosts)
+function initEmojiPicker() {
+    if (typeof window.loadEmojiPicker !== 'function') return;
+    window.loadEmojiPicker().then(function () {
+        const el = document.querySelector('emoji-picker');
+        if (el) {
+            el.addEventListener('emoji-click', function (event) {
+                if (messageInput) messageInput.value += event.detail.unicode;
+                toggleEmojiPicker();
+            });
+        }
     });
 }
+initEmojiPicker();
 
 function toggleEmojiPicker() {
     document.getElementById('emojiPickerContainer').classList.toggle('hidden');
