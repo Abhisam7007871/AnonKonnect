@@ -223,6 +223,13 @@
                                 <button type="button" class="btn btn-outline" id="createPrivateRoomBtn" onclick="createPrivateRoom()">
                                     <i class="ph ph-plus-circle"></i> Create private room
                                 </button>
+                                <div id="privateRoomModeChoice" class="private-room-mode-choice hidden">
+                                    <span class="private-room-mode-choice-label">Choose room type:</span>
+                                    <button type="button" class="btn btn-outline btn-sm" onclick="createPrivateRoomWithMode('text')"><i class="ph ph-chat-text"></i> Text</button>
+                                    <button type="button" class="btn btn-outline btn-sm" onclick="createPrivateRoomWithMode('audio')"><i class="ph ph-microphone"></i> Audio</button>
+                                    <button type="button" class="btn btn-outline btn-sm" onclick="createPrivateRoomWithMode('video')"><i class="ph ph-video-camera"></i> Video</button>
+                                    <button type="button" class="btn btn-outline btn-sm" onclick="closePrivateRoomModeChoice()">Cancel</button>
+                                </div>
                                 <input type="text" id="privateRoomCode" placeholder="Enter room code" maxlength="8" style="width: 140px; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--glass-border); background: var(--glass-bg); color: var(--text-primary); text-transform: uppercase;">
                                 <button type="button" class="btn btn-secondary" id="joinPrivateRoomBtn" onclick="joinPrivateRoom()">Join room</button>
                             </div>
@@ -537,6 +544,12 @@
                     <button type="button" class="tool-btn-header" id="createPrivateRoomInCallBtn" onclick="createPrivateRoomFromCall()" title="Create private room (share code with partner)">
                         <i class="ph ph-key"></i> Private room
                     </button>
+                    <div id="roomModeSwitch" class="room-mode-switch hidden">
+                        <span class="room-mode-switch-label">Mode:</span>
+                        <button type="button" class="tool-btn-header btn-mode" onclick="switchRoomMode('text')" data-mode="text" title="Text chat"><i class="ph ph-chat-text"></i> Text</button>
+                        <button type="button" class="tool-btn-header btn-mode" onclick="switchRoomMode('audio')" data-mode="audio" title="Audio"><i class="ph ph-microphone"></i> Audio</button>
+                        <button type="button" class="tool-btn-header btn-mode" onclick="switchRoomMode('video')" data-mode="video" title="Video"><i class="ph ph-video-camera"></i> Video</button>
+                    </div>
                 </div>
             </div>
 
@@ -553,6 +566,10 @@
                         <div class="v-label" id="remoteLabel">Stranger</div>
                         <div class="media-overlay" id="remoteMediaState">Waiting for partner...</div>
                     </div>
+                </div>
+                <div id="remoteScreenContainer" class="remote-screen-container hidden">
+                    <video id="remoteScreen" autoplay playsinline class="remote-screen-video"></video>
+                    <div class="remote-screen-label">Shared screen</div>
                 </div>
             </div>
 
@@ -610,35 +627,21 @@
                 </div>
 
                 <div class="input-area">
-                    <span class="input-area-label">Emoji &amp; more</span>
-                    <div class="emoji-quick-strip" id="emojiQuickStrip" title="Click to add to message">
-                        <button type="button" class="emoji-quick-btn" onclick="insertQuickEmoji('😀')">😀</button>
-                        <button type="button" class="emoji-quick-btn" onclick="insertQuickEmoji('❤️')">❤️</button>
-                        <button type="button" class="emoji-quick-btn" onclick="insertQuickEmoji('👍')">👍</button>
-                        <button type="button" class="emoji-quick-btn" onclick="insertQuickEmoji('😂')">😂</button>
-                        <button type="button" class="emoji-quick-btn" onclick="insertQuickEmoji('🔥')">🔥</button>
-                        <button type="button" class="emoji-quick-btn" onclick="insertQuickEmoji('👋')">👋</button>
-                        <button type="button" class="emoji-quick-btn" onclick="insertQuickEmoji('🎉')">🎉</button>
-                    </div>
+                    <span class="input-area-label">Emoji</span>
                     <div class="input-wrapper w-100">
                         <div class="chat-toolbar">
-                            <button id="emojiBtn" class="toolbar-btn" onclick="toggleEmojiPicker()" title="Emoji"><i
-                                    class="ph-bold ph-smiley"></i></button>
-                            <button id="gifBtn" class="toolbar-btn" onclick="toggleGifPicker()" title="GIFs"><i
-                                    class="ph-bold ph-gif"></i></button>
-                            <button id="stickerBtn" class="toolbar-btn" onclick="toggleStickerPicker()"
-                                title="Stickers"><i class="ph-bold ph-sticker"></i></button>
-                            <span id="recordingIndicator" class="hidden text-brand"><i class="ph-fill ph-record"></i>
-                                Recording...</span>
+                            <button id="emojiBtn" class="toolbar-btn toolbar-btn-with-label" onclick="toggleEmojiPicker()" title="Click to open emoji picker"><i class="ph-bold ph-smiley"></i><span class="toolbar-btn-label">Emoji</span></button>
+                            <button id="gifBtn" class="toolbar-btn toolbar-btn-with-label" onclick="toggleGifPicker()" title="GIFs"><i class="ph-bold ph-gif"></i><span class="toolbar-btn-label">GIF</span></button>
+                            <button id="stickerBtn" class="toolbar-btn toolbar-btn-with-label" onclick="toggleStickerPicker()" title="Stickers"><i class="ph-bold ph-sticker"></i><span class="toolbar-btn-label">Stickers</span></button>
+                            <span id="recordingIndicator" class="hidden text-brand"><i class="ph-fill ph-record"></i> Recording...</span>
                         </div>
                         <div class="input-box">
                             <input type="text" id="messageInput" placeholder="Type a message..."
                                 onkeypress="handleMessageKeyPress(event)" autocomplete="off">
-                            <button class="btn-voice" id="voiceBtn" title="Hold to Record"
+                            <button class="btn-voice btn-with-label" id="voiceBtn" title="Hold to Record"
                                 onmousedown="startVoiceRecording()" onmouseup="stopVoiceRecording()"
-                                onmouseleave="cancelVoiceRecording()"><i class="ph-fill ph-microphone"></i></button>
-                            <button class="btn-send" onclick="sendMessage()"><i
-                                    class="ph-fill ph-paper-plane-right"></i></button>
+                                onmouseleave="cancelVoiceRecording()"><i class="ph-fill ph-microphone"></i><span class="toolbar-btn-label">Voice</span></button>
+                            <button class="btn-send btn-with-label" onclick="sendMessage()"><i class="ph-fill ph-paper-plane-right"></i><span class="toolbar-btn-label">Send</span></button>
                         </div>
                     </div>
                 </div>
@@ -653,6 +656,7 @@
                 <button class="tool-btn" onclick="toggleChatPanel()" id="tool-chat"><i
                         class="ph-fill ph-chat-centered-text"></i>
                     Chat</button>
+                <button class="tool-btn" id="toggleScreenShareBtn" onclick="toggleRoomScreenShare()" title="Share screen" style="display: none;"><i class="ph ph-monitor"></i> Share screen</button>
             </div>
 
         </div>

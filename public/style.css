@@ -1382,6 +1382,41 @@ body {
     pointer-events: none;
 }
 
+.remote-screen-container {
+    position: absolute;
+    bottom: 60px;
+    right: 20px;
+    width: 280px;
+    max-width: 40%;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 2px solid var(--primary);
+    background: #000;
+    z-index: 100;
+}
+
+.remote-screen-container.hidden {
+    display: none !important;
+}
+
+.remote-screen-video {
+    width: 100%;
+    height: auto;
+    display: block;
+    background: #000;
+}
+
+.remote-screen-label {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 4px 8px;
+    font-size: 11px;
+    background: rgba(0, 0, 0, 0.7);
+    color: #fff;
+}
+
 /* Session top bar: Skip/Leave/Chat always visible in video/audio mode (outside collapsed chat) */
 .session-top-bar {
     position: fixed;
@@ -1426,6 +1461,29 @@ body {
     display: flex;
     gap: 10px;
     align-items: center;
+    flex-wrap: wrap;
+}
+
+.room-mode-switch {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.room-mode-switch-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-right: 4px;
+}
+
+.room-mode-switch .btn-mode.active {
+    background: rgba(139, 92, 246, 0.25);
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.room-mode-switch.hidden {
+    display: none !important;
 }
 
 /* Chat Layout */
@@ -1724,6 +1782,31 @@ video {
     cursor: pointer;
 }
 
+.btn-with-label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 0 8px;
+    min-width: 40px;
+}
+
+.btn-voice.btn-with-label { right: 54px; width: auto; min-width: 44px; }
+.btn-send.btn-with-label { width: auto; min-width: 44px; }
+
+.btn-with-label .toolbar-btn-label {
+    font-size: 11px;
+    color: inherit;
+}
+.btn-voice.btn-with-label .toolbar-btn-label { color: white; }
+.btn-send.btn-with-label .toolbar-btn-label { color: white; }
+
+@media (max-width: 480px) {
+    .btn-with-label .toolbar-btn-label { display: none; }
+    .btn-voice.btn-with-label { right: 50px; min-width: 40px; }
+    .btn-send.btn-with-label { min-width: 40px; }
+}
+
 /* Input area label and quick emoji strip (text chat emoji section) */
 .input-area-label {
     display: block;
@@ -1735,26 +1818,22 @@ video {
     letter-spacing: 0.5px;
 }
 
-.emoji-quick-strip {
+/* Single emoji button opens full picker; quick strip removed */
+
+.private-room-mode-choice {
     display: flex;
-    gap: 6px;
+    gap: 8px;
     flex-wrap: wrap;
-    margin-bottom: 10px;
+    align-items: center;
 }
 
-.emoji-quick-btn {
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid var(--glass-border);
-    border-radius: 8px;
-    font-size: 20px;
-    padding: 6px 10px;
-    cursor: pointer;
-    transition: var(--transition-fast);
+.private-room-mode-choice-label {
+    font-size: 13px;
+    color: var(--text-secondary);
 }
 
-.emoji-quick-btn:hover {
-    background: rgba(255, 255, 255, 0.12);
-    transform: scale(1.08);
+.private-room-mode-choice.hidden {
+    display: none !important;
 }
 
 /* Rich Chat Toolbar & Pickers */
@@ -1776,6 +1855,26 @@ video {
 
 .toolbar-btn:hover {
     color: var(--primary);
+}
+
+.toolbar-btn-with-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.toolbar-btn-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+}
+
+.toolbar-btn-with-label:hover .toolbar-btn-label {
+    color: var(--primary);
+}
+
+@media (max-width: 480px) {
+    .toolbar-btn-label { display: none; }
 }
 
 .picker-container {

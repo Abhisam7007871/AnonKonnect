@@ -99,7 +99,7 @@ function initRooms(io, socket) {
         if (!room) return;
         const idx = room.participants.findIndex(p => p.id === socket.id);
         if (idx === -1) return;
-        const left = room.participants.splice(idx, 1)[0];
+        room.participants.splice(idx, 1)[0];
         socket.leave(roomId);
         if (room.participants.length === 0) {
             rooms.delete(roomId);
@@ -107,6 +107,16 @@ function initRooms(io, socket) {
         } else {
             socket.to(roomId).emit('participant_left', { socketId: socket.id, participants: room.participants });
         }
+    });
+
+    socket.on('room_switch_mode', (data) => {
+        const { roomId, mode } = data || {};
+        if (!['text', 'audio', 'video'].includes(mode)) return;
+        const room = rooms.get(roomId);
+        if (!room || !room.participants.some(p => p.id === socket.id)) return;
+        room.mode = mode;
+        io.to(roomId).emit('room_mode_switched', { mode });
+        console.log(`[SERVER] Room ${roomId} mode switched to ${mode}`);
     });
 }
 
