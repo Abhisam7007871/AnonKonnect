@@ -1,19 +1,21 @@
 /**
  * SCALABLE SIGNALING HANDLER
- * Uses Redis to verify session membership across multiple instances.
+ * Verifies session membership with graceful Redis fallback.
  */
 
 function initSignaling(io, socket, localSessions, redis) {
 
     async function verifySession(sessionId, socketId) {
-        // 1. Check local cache first for performance
+        // 1. Check local cache first
         let session = localSessions.get(sessionId);
 
-        // 2. Check Redis if not found locally (distributed session)
-        if (!session) {
-            const sessionStr = await redis.get(`session:${sessionId}`);
-            if (sessionStr) {
-                session = JSON.parse(sessionStr);
+        // 2. Check Redis if available and not found locally
+        if (!session && redis) {
+            try {
+                const sessionStr = await redis.get(`session:${sessionId}`);
+                if (sessionStr) session = JSON.parse(sessionStr);
+            } catch (err) {
+                console.warn('[SERVER] Redis session lookup failed:', err.message);
             }
         }
 
@@ -27,12 +29,8 @@ function initSignaling(io, socket, localSessions, redis) {
     socket.on('offer', async (data) => {
         const { to, offer, sessionId } = data;
         const session = await verifySession(sessionId, socket.id);
-
         if (session) {
-            io.to(to).emit('offer', {
-                from: socket.id,
-                offer
-            });
+            io.to(to).emit('offer', { from: socket.id, offer });
         }
     });
 
@@ -40,12 +38,8 @@ function initSignaling(io, socket, localSessions, redis) {
     socket.on('answer', async (data) => {
         const { to, answer, sessionId } = data;
         const session = await verifySession(sessionId, socket.id);
-
         if (session) {
-            io.to(to).emit('answer', {
-                from: socket.id,
-                answer
-            });
+            io.to(to).emit('answer', { from: socket.id, answer });
         }
     });
 
@@ -53,12 +47,8 @@ function initSignaling(io, socket, localSessions, redis) {
     socket.on('ice-candidate', async (data) => {
         const { to, candidate, sessionId } = data;
         const session = await verifySession(sessionId, socket.id);
-
         if (session) {
-            io.to(to).emit('ice-candidate', {
-                from: socket.id,
-                candidate
-            });
+            io.to(to).emit('ice-candidate', { from: socket.id, candidate });
         }
     });
 
@@ -66,13 +56,8 @@ function initSignaling(io, socket, localSessions, redis) {
     socket.on('chat-message', async (data) => {
         const { to, message, sessionId } = data;
         const session = await verifySession(sessionId, socket.id);
-
         if (session) {
-            io.to(to).emit('chat-message', {
-                from: socket.id,
-                message,
-                timestamp: Date.now()
-            });
+            io.to(to).emit('chat-message', { from: socket.id, message, timestamp: Date.now() });
         }
     });
 
@@ -80,16 +65,10 @@ function initSignaling(io, socket, localSessions, redis) {
     socket.on('typing', async (data) => {
         const { to, isTyping, sessionId } = data;
         const session = await verifySession(sessionId, socket.id);
-
         if (session) {
-            io.to(to).emit('typing', {
-                from: socket.id,
-                isTyping
-            });
+            io.to(to).emit('typing', { from: socket.id, isTyping });
         }
     });
 }
 
-module.exports = {
-    initSignaling
-};
+module.exports = { initSignaling };

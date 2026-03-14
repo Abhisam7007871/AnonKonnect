@@ -1,10 +1,105 @@
 const crypto = require('crypto');
 
 /**
- * PRODUCTION REDIS-BACKED MATCHMAKING
- * Uses Redis lists for queues and Redis hashes for session state.
+ * PRODUCTION MATCHMAKING WITH GRACEFUL REDIS FALLBACK
+ * Uses Redis when available, falls back to in-memory queues otherwise.
+ * This ensures the server works on Render free tier (no Redis) AND scales with Redis.
  */
 
+// In-memory fallback queues (used when Redis is unavailable)
+const memQueues = { text: [], audio: [], video: [] };
+const memReconnect = new Map();
+
+// ─── Helpers: Queue abstraction layer ───────────────────────────
+async function queuePush(mode, userStr, redis) {
+    if (redis) {
+        await redis.lPush(`queue:${mode}`, userStr);
+    } else {
+        memQueues[mode].push(userStr);
+    }
+}
+
+async function queuePop(mode, redis) {
+    if (redis) {
+        return await redis.rPop(`queue:${mode}`);
+    } else {
+        return memQueues[mode].length > 0 ? memQueues[mode].shift() : null;
+    }
+}
+
+async function queuePushBack(mode, userStr, redis) {
+    if (redis) {
+        await redis.rPush(`queue:${mode}`, userStr);
+    } else {
+        memQueues[mode].unshift(userStr);
+    }
+}
+
+async function queueGetAll(mode, redis) {
+    if (redis) {
+        return await redis.lRange(`queue:${mode}`, 0, -1);
+    } else {
+        return [...memQueues[mode]];
+    }
+}
+
+async function queueRemove(mode, userStr, redis) {
+    if (redis) {
+        await redis.lRem(`queue:${mode}`, 0, userStr);
+    } else {
+        memQueues[mode] = memQueues[mode].filter(u => u !== userStr);
+    }
+}
+
+async function setReconnect(socketId, data, redis) {
+    if (redis) {
+        await redis.set(`reconnect:${socketId}`, JSON.stringify(data), { EX: 60 });
+    } else {
+        memReconnect.set(socketId, data);
+        setTimeout(() => memReconnect.delete(socketId), 60000);
+    }
+}
+
+async function getReconnect(socketId, redis) {
+    if (redis) {
+        const d = await redis.get(`reconnect:${socketId}`);
+        return d ? JSON.parse(d) : null;
+    } else {
+        return memReconnect.get(socketId) || null;
+    }
+}
+
+async function delReconnect(socketId, redis) {
+    if (redis) {
+        await redis.del(`reconnect:${socketId}`);
+    } else {
+        memReconnect.delete(socketId);
+    }
+}
+
+async function setSession(sessionId, session, redis) {
+    if (redis) {
+        await redis.set(`session:${sessionId}`, JSON.stringify(session), { EX: 3600 });
+    }
+}
+
+async function getSession(sessionId, localSessions, redis) {
+    let session = localSessions.get(sessionId);
+    if (!session && redis) {
+        const s = await redis.get(`session:${sessionId}`);
+        if (s) session = JSON.parse(s);
+    }
+    return session;
+}
+
+async function delSession(sessionId, localSessions, redis) {
+    localSessions.delete(sessionId);
+    if (redis) {
+        await redis.del(`session:${sessionId}`);
+    }
+}
+
+// ─── Core matchmaking logic ────────────────────────────────────
 async function initMatchmaking(io, socket, localSessions, redis) {
 
     socket.on('join-queue', async (data) => {
@@ -15,26 +110,15 @@ async function initMatchmaking(io, socket, localSessions, redis) {
             return;
         }
 
-        const user = {
-            id: socket.id,
-            mode,
-            preferences
-        };
+        const user = { id: socket.id, mode, preferences };
+        const userStr = JSON.stringify(user);
 
-        const queueKey = `queue:${mode}`;
-
-        // 1. Ensure user isn't already in any queue (idempotency)
         await removeFromAllQueues(socket.id, redis);
+        await queuePush(mode, userStr, redis);
+        console.log(`[SERVER] User ${socket.id} joined ${mode} queue`);
 
-        // 2. Add to Redis queue
-        await redis.lPush(queueKey, JSON.stringify(user));
-        console.log(`[SERVER] User ${socket.id} joined Redis queue ${mode}`);
-
-        // 3. Update UI
         await emitQueueUpdate(io, mode, redis);
-
-        // 4. Trigger match check
-        tryMatch(io, mode, localSessions, redis);
+        await tryMatch(io, mode, localSessions, redis);
     });
 
     socket.on('leave-queue', async () => {
@@ -54,192 +138,144 @@ async function initMatchmaking(io, socket, localSessions, redis) {
 
     socket.on('reconnect_request', async () => {
         console.log(`[SERVER] Reconnect request from ${socket.id}`);
-
-        const reconnectKey = `reconnect:${socket.id}`;
-        const recentData = await redis.get(reconnectKey);
+        const recentData = await getReconnect(socket.id, redis);
 
         if (!recentData) {
             socket.emit('reconnect_failed', { message: 'Session expired or not found.' });
             return;
         }
 
-        const { partnerId, mode } = JSON.parse(recentData);
-        const queueKey = `queue:${mode}`;
+        const { partnerId, mode } = recentData;
+        const queue = await queueGetAll(mode, redis);
+        const partnerEntry = queue.find(u => JSON.parse(u).id === partnerId);
 
-        // Check if partner is still in the queue
-        const queue = await redis.lRange(queueKey, 0, -1);
-        const partnerIndex = queue.findIndex(u => JSON.parse(u).id === partnerId);
-
-        if (partnerIndex !== -1) {
-            // Partner available! Pull them from Redis atomicity is tricky here without Lua, 
-            // but for this scale LREM works.
-            await redis.lRem(queueKey, 1, queue[partnerIndex]);
-            await redis.del(reconnectKey);
-
-            const partner = JSON.parse(queue[partnerIndex]);
+        if (partnerEntry) {
+            await queueRemove(mode, partnerEntry, redis);
+            await delReconnect(socket.id, redis);
+            const partner = JSON.parse(partnerEntry);
             const leaver = { id: socket.id, mode, preferences: {} };
-
-            forceMatch(io, leaver, partner, mode, localSessions, redis);
+            await forceMatch(io, leaver, partner, mode, localSessions, redis);
         } else {
-            await redis.del(reconnectKey);
+            await delReconnect(socket.id, redis);
             socket.emit('reconnect_failed', { message: 'User is no longer available.' });
         }
     });
 }
 
-/**
- * Attempt to match two users in the same mode.
- * Uses Redis atomicity to prevent double-matching.
- */
 async function tryMatch(io, mode, localSessions, redis) {
-    const queueKey = `queue:${mode}`;
-
-    // We try to pop 2 users. 
-    // In a multi-server setup, we use RPOP to ensure only one server gets the users.
-    const user1Str = await redis.rPop(queueKey);
+    const user1Str = await queuePop(mode, redis);
     if (!user1Str) return;
 
-    const user2Str = await redis.rPop(queueKey);
+    const user2Str = await queuePop(mode, redis);
     if (!user2Str) {
-        // Only one user found, put them back
-        await redis.rPush(queueKey, user1Str);
+        await queuePushBack(mode, user1Str, redis);
         return;
     }
 
     const user1 = JSON.parse(user1Str);
     const user2 = JSON.parse(user2Str);
-
-    forceMatch(io, user1, user2, mode, localSessions, redis);
+    await forceMatch(io, user1, user2, mode, localSessions, redis);
 }
 
 async function forceMatch(io, user1, user2, mode, localSessions, redis) {
     const sessionId = crypto.randomUUID();
 
     const session = {
-        id: sessionId,
-        mode,
-        user1,
-        user2,
+        id: sessionId, mode, user1, user2,
         startTime: Date.now()
     };
 
-    // Store in Redis for distributed access if needed, 
-    // though WebRTC signaling currently relies on local Socket instances.
-    // We'll use localSessions for signaling lookups BUT Redis for global state.
     localSessions.set(sessionId, session);
-    await redis.set(`session:${sessionId}`, JSON.stringify(session), { EX: 3600 });
+    await setSession(sessionId, session, redis);
 
-    // Internal Socket.io room join (works across instances due to Redis Adapter)
-    io.to(user1.id).socketsJoin(sessionId);
-    io.to(user2.id).socketsJoin(sessionId);
+    // Join Socket.IO room
+    const s1 = io.sockets.sockets.get(user1.id);
+    const s2 = io.sockets.sockets.get(user2.id);
+    if (s1) s1.join(sessionId);
+    if (s2) s2.join(sessionId);
 
     const iceServers = {
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
-            {
-                urls: 'turn:YOUR_DOMAIN_OR_IP:3478',
-                username: 'anonkonnect',
-                credential: 'konnect-secret-2026'
-            }
+            // TURN server (uncomment and configure when deployed):
+            // { urls: 'turn:YOUR_DOMAIN:3478', username: 'anonkonnect', credential: 'konnect-secret-2026' }
         ],
         iceCandidatePoolSize: 10,
     };
 
     io.to(user1.id).emit('matched', {
-        sessionId,
-        peerId: user2.id,
-        mode,
-        initiator: true,
-        peerPreferences: user2.preferences || {},
-        iceServers
+        sessionId, peerId: user2.id, mode,
+        initiator: true, peerPreferences: user2.preferences || {}, iceServers
     });
 
     io.to(user2.id).emit('matched', {
-        sessionId,
-        peerId: user1.id,
-        mode,
-        initiator: false,
-        peerPreferences: user1.preferences || {},
-        iceServers
+        sessionId, peerId: user1.id, mode,
+        initiator: false, peerPreferences: user1.preferences || {}, iceServers
     });
 
     console.log(`[SERVER] Users Matched! Session: ${sessionId} (${mode})`);
-    emitQueueUpdate(io, mode, redis);
+    await emitQueueUpdate(io, mode, redis);
 }
 
 async function terminateSession(socket, sessionId, type, io, localSessions, redis) {
-    const sessionStr = await redis.get(`session:${sessionId}`);
-    const session = sessionStr ? JSON.parse(sessionStr) : localSessions.get(sessionId);
+    const session = await getSession(sessionId, localSessions, redis);
+    if (!session) return;
 
-    if (session) {
-        const isUser1 = session.user1.id === socket.id;
-        const peerId = isUser1 ? session.user2.id : session.user1.id;
-        const peerData = isUser1 ? session.user2 : session.user1;
-        const actionUserData = isUser1 ? session.user1 : session.user2;
-        const mode = session.mode;
+    const isUser1 = session.user1.id === socket.id;
+    const peerId = isUser1 ? session.user2.id : session.user1.id;
+    const peerData = isUser1 ? session.user2 : session.user1;
+    const actionUserData = isUser1 ? session.user1 : session.user2;
+    const mode = session.mode;
 
-        console.log(`[SERVER] Terminating session ${sessionId}. Type: ${type}`);
+    console.log(`[SERVER] Terminating session ${sessionId}. Type: ${type}`);
+
+    if (type === 'skip') {
+        io.to(peerId).emit('session:skip', { message: 'Your partner skipped. Searching for a new match...' });
+        io.to(socket.id).emit('session:skip', { message: 'Skipping... Searching for a new match.', isSelfAction: true });
+    } else if (type === 'leave') {
+        io.to(peerId).emit('session:partner_left', { message: 'Your partner left the chat.' });
+        io.to(socket.id).emit('left-to-home', { partnerName: peerData.preferences?.nickname || 'Stranger' });
+    } else if (type === 'disconnect') {
+        io.to(peerId).emit('session:partner_left', { message: 'Your partner disconnected.' });
+    }
+
+    await delSession(sessionId, localSessions, redis);
+
+    setTimeout(async () => {
+        await queuePush(mode, JSON.stringify(peerData), redis);
+        io.to(peerId).emit('rejoining-queue');
 
         if (type === 'skip') {
-            io.to(peerId).emit('session:skip', { message: 'Your partner skipped. Searching for a new match...' });
-            io.to(socket.id).emit('session:skip', { message: 'Skipping... Searching for a new match.', isSelfAction: true });
+            await queuePush(mode, JSON.stringify(actionUserData), redis);
+            io.to(socket.id).emit('rejoining-queue');
         } else if (type === 'leave') {
-            io.to(peerId).emit('session:partner_left', { message: 'Your partner left the chat.' });
-            const partnerName = peerData.preferences?.nickname || 'Stranger';
-            io.to(socket.id).emit('left-to-home', { partnerName });
-        } else if (type === 'disconnect') {
-            io.to(peerId).emit('session:partner_left', { message: 'Your partner disconnected.' });
+            await setReconnect(socket.id, { partnerId: peerId, mode }, redis);
+            console.log(`[SERVER] Reconnect window started for ${socket.id}`);
         }
 
-        localSessions.delete(sessionId);
-        await redis.del(`session:${sessionId}`);
-
-        // Re-queue logic
-        setTimeout(async () => {
-            await redis.lPush(`queue:${mode}`, JSON.stringify(peerData));
-            io.to(peerId).emit('rejoining-queue');
-
-            if (type === 'skip') {
-                await redis.lPush(`queue:${mode}`, JSON.stringify(actionUserData));
-                io.to(socket.id).emit('rejoining-queue');
-            } else if (type === 'leave') {
-                // Store reconnect window in Redis (60s)
-                await redis.set(`reconnect:${socket.id}`, JSON.stringify({
-                    partnerId: peerId,
-                    mode: mode
-                }), { EX: 60 });
-                console.log(`[SERVER] Redis Reconnect window started for ${socket.id}`);
-            }
-
-            emitQueueUpdate(io, mode, redis);
-            tryMatch(io, mode, localSessions, redis);
-        }, 500);
-    }
+        await emitQueueUpdate(io, mode, redis);
+        await tryMatch(io, mode, localSessions, redis);
+    }, 500);
 }
 
 async function emitQueueUpdate(io, mode, redis) {
-    const queueKey = `queue:${mode}`;
-    const queue = await redis.lRange(queueKey, 0, -1);
-
+    const queue = await queueGetAll(mode, redis);
     queue.forEach((userStr, index) => {
         const user = JSON.parse(userStr);
         io.to(user.id).emit('queue-update', {
-            position: index + 1,
-            totalInQueue: queue.length,
+            position: index + 1, totalInQueue: queue.length,
             message: `Waiting for a partner in ${mode} mode...`
         });
     });
 }
 
 async function removeFromAllQueues(socketId, redis) {
-    const modes = ['text', 'audio', 'video'];
-    for (const mode of modes) {
-        const queueKey = `queue:${mode}`;
-        const queue = await redis.lRange(queueKey, 0, -1);
+    for (const mode of ['text', 'audio', 'video']) {
+        const queue = await queueGetAll(mode, redis);
         for (const userStr of queue) {
             if (JSON.parse(userStr).id === socketId) {
-                await redis.lRem(queueKey, 0, userStr);
+                await queueRemove(mode, userStr, redis);
             }
         }
     }
@@ -248,20 +284,13 @@ async function removeFromAllQueues(socketId, redis) {
 async function handleDisconnect(io, socket, localSessions, redis) {
     await removeFromAllQueues(socket.id, redis);
 
-    // Distributed session cleanup
-    // Note: This is slightly expensive for many sessions, in prod we'd use a reverse map in Redis
-    const keys = await redis.keys('session:*');
-    for (const key of keys) {
-        const sessionStr = await redis.get(key);
-        const session = JSON.parse(sessionStr);
+    for (const [sessionId, session] of localSessions.entries()) {
         if (session.user1.id === socket.id || session.user2.id === socket.id) {
-            const sessionId = key.split(':')[1];
-            terminateSession(socket, sessionId, 'disconnect', io, localSessions, redis);
+            console.log(`[SERVER] Ending session ${sessionId} due to disconnect: ${socket.id}`);
+            await terminateSession(socket, sessionId, 'disconnect', io, localSessions, redis);
+            break;
         }
     }
 }
 
-module.exports = {
-    initMatchmaking,
-    handleDisconnect
-};
+module.exports = { initMatchmaking, handleDisconnect };

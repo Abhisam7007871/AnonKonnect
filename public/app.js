@@ -92,15 +92,29 @@ function hideAllScreens() {
 
 // Server connection
 function connectToServer() {
+    // Safety: Verify Socket.IO client loaded from CDN
+    if (typeof io === 'undefined') {
+        console.error('[CLIENT] FATAL: Socket.IO client library not loaded. Check CDN script tag.');
+        alert('Failed to load networking library. Please refresh the page.');
+        return;
+    }
+
     // Dynamically determine signaling server URL
     // LOCAL: http://localhost:3000
-    // PRODUCTION: Use your persistent server URL (Render, Railway, etc.)
+    // PRODUCTION: Your persistent server URL (Render, Railway, etc.)
     const signalingUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
         ? 'http://localhost:3000'
-        : 'https://anonkonnect-server.onrender.com'; // Replace with your actual persistent server URL
+        : 'https://anonkonnect-server.onrender.com'; // Replace with your actual Render URL
 
     console.log(`[CLIENT] Connecting to signaling server: ${signalingUrl}`);
-    socket = io(signalingUrl);
+    socket = io(signalingUrl, {
+        transports: ['websocket', 'polling'], // Prefer WebSocket, fallback to polling
+        reconnection: true,
+        reconnectionAttempts: 10,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        timeout: 20000
+    });
 
     socket.on('connect', () => {
         console.log('[CLIENT] Connected to signaling server');

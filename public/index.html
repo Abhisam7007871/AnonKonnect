@@ -597,7 +597,10 @@
     </div>
 
     <!-- Scripts -->
-    <script src="/socket.io/socket.io.js"></script>
+    <!-- Socket.IO Client via CDN (required when frontend is on a different domain than backend) -->
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"
+        integrity="sha384-CMRy2qMlHEFJtM8lR+94gzjVSjjfRqMa25FAW4E802QoINxJt9i5Zbj/A7rDwqH"
+        crossorigin="anonymous"></script>
     <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
     <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1"></script>
     <script src="app.js"></script>

@@ -22,26 +22,47 @@ const limiter = rateLimit({
 app.use(limiter);
 
 const server = http.createServer(app);
+
+// CORS: Allow Vercel frontend in production
+const ALLOWED_ORIGINS = process.env.FRONTEND_URL
+    ? [process.env.FRONTEND_URL]
+    : ['*'];
+
 const io = new Server(server, {
     cors: {
-        origin: '*', // For dev/testing
+        origin: ALLOWED_ORIGINS[0] === '*' ? '*' : ALLOWED_ORIGINS,
         methods: ['GET', 'POST']
     }
 });
 
-// Redis Setup for scalability
-const pubClient = createClient({ url: process.env.REDIS_URL || 'redis://localhost:6379' });
-const subClient = pubClient.duplicate();
+// Redis Setup for scalability (OPTIONAL - graceful fallback if unavailable)
+const REDIS_URL = process.env.REDIS_URL;
+let pubClient = null;
+let subClient = null;
 
-Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
-    io.adapter(createAdapter(pubClient, subClient));
-    console.log('[SERVER] Redis Adapter connected');
-}).catch(err => {
-    console.error('[SERVER] Redis connection error:', err);
-});
+if (REDIS_URL) {
+    pubClient = createClient({ url: REDIS_URL });
+    subClient = pubClient.duplicate();
+
+    Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
+        io.adapter(createAdapter(pubClient, subClient));
+        console.log('[SERVER] Redis Adapter connected successfully');
+    }).catch(err => {
+        console.warn('[SERVER] Redis connection failed, running in single-instance mode:', err.message);
+        pubClient = null;
+        subClient = null;
+    });
+} else {
+    console.log('[SERVER] No REDIS_URL set. Running in single-instance mode (in-memory matchmaking).');
+}
 
 app.use(cors());
 app.use(express.static(path.join(__dirname, '../public')));
+
+// Health check endpoint (required for Render/Railway)
+app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'ok', uptime: process.uptime(), redis: !!pubClient });
+});
 
 // Store active sessions globally for signaling reference
 const sessions = new Map();
