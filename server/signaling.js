@@ -1,11 +1,34 @@
-function initSignaling(io, socket, sessions) {
-    // 1. WebRTC Offer
-    socket.on('offer', (data) => {
-        const { to, offer, sessionId } = data;
-        const session = sessions.get(sessionId);
+/**
+ * SCALABLE SIGNALING HANDLER
+ * Uses Redis to verify session membership across multiple instances.
+ */
 
-        if (session && (session.user1.id === socket.id || session.user2.id === socket.id)) {
-            // Forward offer to peer
+function initSignaling(io, socket, localSessions, redis) {
+
+    async function verifySession(sessionId, socketId) {
+        // 1. Check local cache first for performance
+        let session = localSessions.get(sessionId);
+
+        // 2. Check Redis if not found locally (distributed session)
+        if (!session) {
+            const sessionStr = await redis.get(`session:${sessionId}`);
+            if (sessionStr) {
+                session = JSON.parse(sessionStr);
+            }
+        }
+
+        if (session && (session.user1.id === socketId || session.user2.id === socketId)) {
+            return session;
+        }
+        return null;
+    }
+
+    // 1. WebRTC Offer
+    socket.on('offer', async (data) => {
+        const { to, offer, sessionId } = data;
+        const session = await verifySession(sessionId, socket.id);
+
+        if (session) {
             io.to(to).emit('offer', {
                 from: socket.id,
                 offer
@@ -14,12 +37,11 @@ function initSignaling(io, socket, sessions) {
     });
 
     // 2. WebRTC Answer
-    socket.on('answer', (data) => {
+    socket.on('answer', async (data) => {
         const { to, answer, sessionId } = data;
-        const session = sessions.get(sessionId);
+        const session = await verifySession(sessionId, socket.id);
 
-        if (session && (session.user1.id === socket.id || session.user2.id === socket.id)) {
-            // Forward answer to peer
+        if (session) {
             io.to(to).emit('answer', {
                 from: socket.id,
                 answer
@@ -28,12 +50,11 @@ function initSignaling(io, socket, sessions) {
     });
 
     // 3. WebRTC ICE Candidates
-    socket.on('ice-candidate', (data) => {
+    socket.on('ice-candidate', async (data) => {
         const { to, candidate, sessionId } = data;
-        const session = sessions.get(sessionId);
+        const session = await verifySession(sessionId, socket.id);
 
-        if (session && (session.user1.id === socket.id || session.user2.id === socket.id)) {
-            // Forward ICE candidate to peer
+        if (session) {
             io.to(to).emit('ice-candidate', {
                 from: socket.id,
                 candidate
@@ -42,12 +63,11 @@ function initSignaling(io, socket, sessions) {
     });
 
     // 4. Text Chat Messaging
-    socket.on('chat-message', (data) => {
+    socket.on('chat-message', async (data) => {
         const { to, message, sessionId } = data;
-        const session = sessions.get(sessionId);
+        const session = await verifySession(sessionId, socket.id);
 
-        if (session && (session.user1.id === socket.id || session.user2.id === socket.id)) {
-            // Forward message to peer
+        if (session) {
             io.to(to).emit('chat-message', {
                 from: socket.id,
                 message,
@@ -57,12 +77,11 @@ function initSignaling(io, socket, sessions) {
     });
 
     // 5. Typing Indicators
-    socket.on('typing', (data) => {
+    socket.on('typing', async (data) => {
         const { to, isTyping, sessionId } = data;
-        const session = sessions.get(sessionId);
+        const session = await verifySession(sessionId, socket.id);
 
-        if (session && (session.user1.id === socket.id || session.user2.id === socket.id)) {
-            // Forward typing indicator
+        if (session) {
             io.to(to).emit('typing', {
                 from: socket.id,
                 isTyping

@@ -93,10 +93,13 @@ function hideAllScreens() {
 // Server connection
 function connectToServer() {
     // Dynamically determine signaling server URL
-    const signalingUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-        ? 'http://localhost:3001'
-        : `${window.location.protocol}//api.${window.location.host}`; // Adjust for production subdomains
+    // LOCAL: http://localhost:3000
+    // PRODUCTION: Use your persistent server URL (Render, Railway, etc.)
+    const signalingUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        ? 'http://localhost:3000'
+        : 'https://anonkonnect-server.onrender.com'; // Replace with your actual persistent server URL
 
+    console.log(`[CLIENT] Connecting to signaling server: ${signalingUrl}`);
     socket = io(signalingUrl);
 
     socket.on('connect', () => {
