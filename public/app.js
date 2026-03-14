@@ -107,7 +107,7 @@ function connectToServer() {
     // PRODUCTION: Your persistent server URL (Render, Railway, etc.)
     const signalingUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
         ? 'http://localhost:3000'
-        : 'https://anonkonnect-server.onrender.com'; // Replace with your actual Render URL
+        : 'https://anonkonnect.onrender.com'; // Replace with your actual Render URL
 
     // #region agent log
     const _hostname = window.location.hostname;
