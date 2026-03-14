@@ -24,13 +24,17 @@ app.use(limiter);
 const server = http.createServer(app);
 
 // CORS: Allow frontend(s) – use comma-separated FRONTEND_URL for Vercel + Render (e.g. "https://app.vercel.app,https://anonkonnect.onrender.com")
+// Normalize: strip trailing slash so env "https://example.com/" matches browser Origin "https://example.com"
 const ALLOWED_ORIGINS = process.env.FRONTEND_URL
-    ? process.env.FRONTEND_URL.split(',').map(s => s.trim()).filter(Boolean)
+    ? process.env.FRONTEND_URL.split(',').map(s => s.trim().replace(/\/$/, '')).filter(Boolean)
     : ['*'];
-// Allow when origin is in list, or when origin is missing (e.g. WebSocket upgrade from some clients/proxies)
+// Allow when origin is in list (normalized), or when origin is missing (e.g. WebSocket upgrade from some clients/proxies). Empty list => allow all.
 const CORS_ORIGIN = ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS[0] === '*'
     ? '*'
-    : (origin, cb) => cb(null, origin == null || ALLOWED_ORIGINS.includes(origin));
+    : (origin, cb) => {
+        const normalized = origin != null ? String(origin).replace(/\/$/, '') : origin;
+        cb(null, normalized == null || ALLOWED_ORIGINS.includes(normalized));
+    };
 
 const io = new Server(server, {
     cors: {
