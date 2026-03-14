@@ -17,6 +17,14 @@ let mainContent, joinFormSection, waitingScreen, chatScreen, mediaContainer;
 // State flags
 let isChatOpen = false;
 
+// Private room state
+let isRoomMode = false;
+let roomId = null;
+let roomParticipants = [];
+let roomPeerConnections = new Map();
+let pendingInviteCode = null;
+let createdRoomId = null;
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize DOM references
@@ -196,6 +204,333 @@ function connectToServer() {
         alert(data.message || 'Reconnect failed.');
         hideReconnectBanner();
     });
+
+    socket.on('room_created', (data) => {
+        createdRoomId = data.roomId || data.code;
+        const el = document.getElementById('privateRoomCreated');
+        const codeEl = document.getElementById('privateRoomCodeDisplay');
+        if (el && codeEl) {
+            codeEl.textContent = data.code || data.roomId;
+            el.classList.remove('hidden');
+        }
+        document.getElementById('privateRoomError').classList.add('hidden');
+    });
+
+    socket.on('room_joined', (data) => {
+        handleRoomJoined(data);
+    });
+
+    socket.on('room_error', (data) => {
+        const errEl = document.getElementById('privateRoomError');
+        if (errEl) {
+            errEl.textContent = data.message || 'Room error';
+            errEl.classList.remove('hidden');
+        }
+    });
+
+    socket.on('participant_joined', (data) => {
+        const newId = data.socketId;
+        if (isRoomMode && roomId) {
+            if (!roomPeerConnections.has(newId)) {
+                handleRoomNewParticipant(newId, data.preferences || {});
+            }
+            if (data.participants) roomParticipants = data.participants;
+            return;
+        }
+        if (createdRoomId && data.participants) {
+            roomId = createdRoomId;
+            roomParticipants = data.participants;
+            isRoomMode = true;
+            createdRoomId = null;
+            enterRoomCallView(roomId, roomParticipants, currentMode).then(() => {
+                handleRoomNewParticipant(newId, data.preferences || {});
+            });
+        }
+    });
+
+    socket.on('participant_left', (data) => {
+        if (roomId && data.socketId) {
+            const pc = roomPeerConnections.get(data.socketId);
+            if (pc) {
+                pc.close();
+                roomPeerConnections.delete(data.socketId);
+            }
+            if (data.participants) roomParticipants = data.participants;
+        }
+    });
+
+    socket.on('private_room_invite', (data) => {
+        pendingInviteCode = data.code;
+        const modal = document.getElementById('privateRoomInviteModal');
+        const msgEl = document.getElementById('privateRoomInviteMessage');
+        const codeEl = document.getElementById('privateRoomInviteCode');
+        if (modal && msgEl && codeEl) {
+            msgEl.textContent = data.message || 'You both have the same code. You can join this private call anytime using this ID. Max 4 people.';
+            codeEl.textContent = data.code || '';
+            modal.classList.remove('hidden');
+        }
+    });
+
+    socket.on('room-offer', handleRoomOffer);
+    socket.on('room-answer', handleRoomAnswer);
+    socket.on('room-ice-candidate', handleRoomIceCandidate);
+    socket.on('room-chat-message', handleRoomChatMessage);
+    socket.on('room-typing', handleRoomTyping);
+}
+
+function createPrivateRoom() {
+    if (!socket || !socket.connected) {
+        alert('Not connected. Please try again.');
+        return;
+    }
+    const mode = document.getElementById('selectedMode').value || 'video';
+    currentMode = mode;
+    userPreferences = {
+        nickname: document.getElementById('nickname').value || 'Stranger',
+        gender: document.getElementById('gender').value || 'unspecified',
+        purpose: document.getElementById('purpose').value || 'casual'
+    };
+    socket.emit('create_private_room', { mode, preferences: userPreferences });
+}
+
+function joinPrivateRoom() {
+    if (!socket || !socket.connected) {
+        alert('Not connected. Please try again.');
+        return;
+    }
+    const input = document.getElementById('privateRoomCode');
+    const code = (input && input.value || '').trim().toUpperCase();
+    if (!code) {
+        const errEl = document.getElementById('privateRoomError');
+        if (errEl) { errEl.textContent = 'Enter a room code'; errEl.classList.remove('hidden'); }
+        return;
+    }
+    userPreferences = {
+        nickname: document.getElementById('nickname').value || 'Stranger',
+        gender: document.getElementById('gender').value || 'unspecified',
+        purpose: document.getElementById('purpose').value || 'casual'
+    };
+    document.getElementById('privateRoomError').classList.add('hidden');
+    socket.emit('join_private_room', { code, preferences: userPreferences });
+}
+
+function copyRoomCode() {
+    const el = document.getElementById('privateRoomCodeDisplay');
+    if (el && el.textContent) {
+        navigator.clipboard.writeText(el.textContent).then(() => showConnectionToast('Code copied!')).catch(() => {});
+    }
+}
+
+function createPrivateRoomFromCall() {
+    if (!socket || !socket.connected || !currentPeerId || !currentSessionId) return;
+    socket.emit('create_private_room', {
+        mode: currentMode,
+        preferences: userPreferences,
+        fromCall: true,
+        peerId: currentPeerId
+    });
+}
+
+function copyInviteRoomCode() {
+    if (pendingInviteCode) {
+        navigator.clipboard.writeText(pendingInviteCode).then(() => showConnectionToast('Code copied!')).catch(() => {});
+    }
+}
+
+function closePrivateRoomInviteModal() {
+    const modal = document.getElementById('privateRoomInviteModal');
+    if (modal) modal.classList.add('hidden');
+    pendingInviteCode = null;
+}
+
+async function handleRoomJoined(data) {
+    roomId = data.roomId || data.code;
+    roomParticipants = data.participants || [];
+    isRoomMode = true;
+    currentMode = data.mode || 'text';
+    const others = roomParticipants.filter(p => p.id !== socket.id);
+    if (others.length === 0) {
+        showChatScreen();
+        applyRoomLayout(currentMode);
+        return;
+    }
+    if (currentMode === 'video' || currentMode === 'audio') {
+        try {
+            const constraints = { audio: true, video: currentMode === 'video' };
+            localStream = await navigator.mediaDevices.getUserMedia(constraints);
+            if (currentMode === 'video' && localVideo) {
+                localVideo.srcObject = localStream;
+                localVideo.onloadedmetadata = () => localVideo.play().catch(() => {});
+            }
+        } catch (e) {
+            console.error('Media error:', e);
+            alert('Please allow camera/microphone to join.');
+            return;
+        }
+    }
+    await enterRoomCallView(roomId, roomParticipants, currentMode);
+    for (const p of others) {
+        await handleRoomNewParticipant(p.id, p.preferences || {});
+    }
+}
+
+async function enterRoomCallView(rId, participants, mode) {
+    currentSessionId = rId;
+    const chatLayout = document.querySelector('.chat-layout');
+    const mediaContainer = document.getElementById('mediaContainer');
+    const chatContainer = document.getElementById('chatContainer');
+    const sessionTopBar = document.getElementById('sessionTopBar');
+    const sessionTopBarPeerName = document.getElementById('sessionTopBarPeerName');
+    if (chatLayout) {
+        chatLayout.classList.remove('text-mode', 'audio-mode', 'video-mode');
+        chatLayout.classList.add(`${mode}-mode`);
+    }
+    if (mode === 'video' || mode === 'audio') {
+        if (mediaContainer) mediaContainer.classList.remove('hidden');
+        if (chatLayout) chatLayout.classList.add('has-media');
+        if (chatContainer) chatContainer.classList.add('chat-collapsed');
+        isChatOpen = false;
+        if (sessionTopBar) sessionTopBar.classList.remove('hidden');
+        if (sessionTopBarPeerName) sessionTopBarPeerName.textContent = 'Private room (' + participants.length + ')';
+    } else {
+        if (mediaContainer) mediaContainer.classList.add('hidden');
+        if (chatLayout) chatLayout.classList.remove('has-media');
+        if (chatContainer) chatContainer.classList.remove('chat-collapsed');
+        if (sessionTopBar) sessionTopBar.classList.add('hidden');
+    }
+    const toolMic = document.getElementById('tool-mic');
+    const toolCam = document.getElementById('tool-cam');
+    const toolChat = document.getElementById('tool-chat');
+    const toolChatBtn = document.getElementById('chatToggleBtn');
+    if (mode === 'text') {
+        if (toolMic) toolMic.style.display = 'none';
+        if (toolCam) toolCam.style.display = 'none';
+        if (toolChat) toolChat.style.display = 'none';
+        if (toolChatBtn) toolChatBtn.style.display = 'none';
+    } else {
+        if (toolMic) toolMic.style.display = '';
+        if (toolCam) toolCam.style.display = mode === 'video' ? '' : 'none';
+        if (toolChat) toolChat.style.display = '';
+        if (toolChatBtn) toolChatBtn.style.display = '';
+    }
+    const createPrivateBtn = document.getElementById('createPrivateRoomInCallBtn');
+    if (createPrivateBtn) createPrivateBtn.style.display = 'none';
+    showChatScreen();
+}
+
+function applyRoomLayout(mode) {
+    const chatLayout = document.querySelector('.chat-layout');
+    const mediaContainer = document.getElementById('mediaContainer');
+    const chatContainer = document.getElementById('chatContainer');
+    if (mode === 'video' || mode === 'audio') {
+        if (mediaContainer) mediaContainer.classList.remove('hidden');
+        if (chatLayout) chatLayout.classList.add('has-media');
+        if (chatContainer) chatContainer.classList.add('chat-collapsed');
+    }
+}
+
+const ICE_SERVERS = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }], iceCandidatePoolSize: 10 };
+
+async function handleRoomNewParticipant(peerSocketId, preferences) {
+    if (roomPeerConnections.has(peerSocketId)) return;
+    const pc = new RTCPeerConnection(ICE_SERVERS);
+    roomPeerConnections.set(peerSocketId, pc);
+    if (localStream) {
+        localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+    }
+    pc.ontrack = (e) => {
+        if (e.streams[0] && remoteVideo) {
+            remoteVideo.srcObject = e.streams[0];
+            remoteVideo.play().catch(() => {});
+        }
+        const remoteAudioEl = document.getElementById('remoteAudio');
+        if (remoteAudioEl) {
+            remoteAudioEl.srcObject = e.streams[0];
+            remoteAudioEl.play().catch(() => {});
+        }
+        const overlay = document.getElementById('remoteMediaState');
+        if (overlay) overlay.style.display = 'none';
+    };
+    pc.onicecandidate = (e) => {
+        if (e.candidate) {
+            socket.emit('room-ice-candidate', { to: peerSocketId, candidate: e.candidate, roomId });
+        }
+    };
+    try {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        socket.emit('room-offer', { to: peerSocketId, offer: pc.localDescription, roomId });
+    } catch (err) {
+        console.error('Room offer error:', err);
+    }
+}
+
+async function handleRoomOffer(data) {
+    const { from, offer } = data;
+    let pc = roomPeerConnections.get(from);
+    if (!pc) {
+        pc = new RTCPeerConnection(ICE_SERVERS);
+        roomPeerConnections.set(from, pc);
+        if (localStream) localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+        pc.ontrack = (e) => {
+            if (e.streams[0] && remoteVideo) {
+                remoteVideo.srcObject = e.streams[0];
+                remoteVideo.play().catch(() => {});
+            }
+            const remoteAudioEl = document.getElementById('remoteAudio');
+            if (remoteAudioEl) {
+                remoteAudioEl.srcObject = e.streams[0];
+                remoteAudioEl.play().catch(() => {});
+            }
+            const overlay = document.getElementById('remoteMediaState');
+            if (overlay) overlay.style.display = 'none';
+        };
+        pc.onicecandidate = (e) => {
+            if (e.candidate) socket.emit('room-ice-candidate', { to: from, candidate: e.candidate, roomId });
+        };
+    }
+    try {
+        await pc.setRemoteDescription(new RTCSessionDescription(offer));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        socket.emit('room-answer', { to: from, answer: pc.localDescription, roomId });
+    } catch (err) {
+        console.error('Room answer error:', err);
+    }
+}
+
+async function handleRoomAnswer(data) {
+    const { from, answer } = data;
+    const pc = roomPeerConnections.get(from);
+    if (pc) {
+        try {
+            await pc.setRemoteDescription(new RTCSessionDescription(answer));
+        } catch (err) {
+            console.error('Room setRemoteDescription error:', err);
+        }
+    }
+}
+
+async function handleRoomIceCandidate(data) {
+    const { from, candidate } = data;
+    const pc = roomPeerConnections.get(from);
+    if (pc && candidate) {
+        try {
+            await pc.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (err) {
+            console.error('Room addIceCandidate error:', err);
+        }
+    }
+}
+
+function handleRoomChatMessage(data) {
+    displayMessage(data.message, 'received');
+}
+
+function handleRoomTyping(data) {
+    if (typingIndicator) {
+        typingIndicator.textContent = data.isTyping ? 'Someone is typing...' : '';
+    }
 }
 
 function updateConnectionStatus(connected, disconnectMessage) {
@@ -668,12 +1003,15 @@ function sendMessage(type = 'text', content = null) {
     displayMessage(payload, 'sent');
     console.log(`[CLIENT] Sending message: ${type}`);
 
-    // Send via signaling server
-    socket.emit('chat-message', {
-        to: currentPeerId,
-        message: payload,
-        sessionId: currentSessionId
-    });
+    if (isRoomMode && roomId) {
+        socket.emit('room-chat-message', { roomId, message: payload });
+    } else {
+        socket.emit('chat-message', {
+            to: currentPeerId,
+            message: payload,
+            sessionId: currentSessionId
+        });
+    }
 }
 
 function handleIncomingMessage(data) {
@@ -738,22 +1076,27 @@ function handleMessageKeyPress(event) {
         sendMessage();
     }
 
-    // Send typing indicator
-    socket.emit('typing', {
-        to: currentPeerId,
-        isTyping: true,
-        sessionId: currentSessionId
-    });
-
-    // Clear typing indicator after 2 seconds
-    clearTimeout(window.typingTimeout);
-    window.typingTimeout = setTimeout(() => {
+    if (isRoomMode && roomId) {
+        socket.emit('room-typing', { roomId, isTyping: true });
+        clearTimeout(window.typingTimeout);
+        window.typingTimeout = setTimeout(() => {
+            socket.emit('room-typing', { roomId, isTyping: false });
+        }, 2000);
+    } else {
         socket.emit('typing', {
             to: currentPeerId,
-            isTyping: false,
+            isTyping: true,
             sessionId: currentSessionId
         });
-    }, 2000);
+        clearTimeout(window.typingTimeout);
+        window.typingTimeout = setTimeout(() => {
+            socket.emit('typing', {
+                to: currentPeerId,
+                isTyping: false,
+                sessionId: currentSessionId
+            });
+        }, 2000);
+    }
 }
 
 function handleTyping(data) {
@@ -766,6 +1109,12 @@ function handleTyping(data) {
 
 // Session management
 function skipUser() {
+    if (isRoomMode && roomId) {
+        socket.emit('leave_private_room', { roomId });
+        fullyCleanupSession();
+        showMainContent();
+        return;
+    }
     if (!currentSessionId) return;
     console.log(`[CLIENT] Skip Button Clicked. Current Session: ${currentSessionId}`);
     socket.emit('skip', {
@@ -774,6 +1123,13 @@ function skipUser() {
 }
 
 function exitToHome() {
+    if (isRoomMode && roomId) {
+        console.log(`[CLIENT] Leaving private room: ${roomId}`);
+        socket.emit('leave_private_room', { roomId });
+        fullyCleanupSession();
+        showMainContent();
+        return;
+    }
     if (currentSessionId) {
         console.log(`[CLIENT] Leave Button Clicked. Ending session: ${currentSessionId}`);
         socket.emit('leave_session', { sessionId: currentSessionId });
@@ -815,6 +1171,15 @@ function fullyCleanupSession() {
 
     currentSessionId = null;
     currentPeerId = null;
+
+    isRoomMode = false;
+    roomId = null;
+    roomParticipants = [];
+    roomPeerConnections.forEach(pc => { try { pc.close(); } catch (e) {} });
+    roomPeerConnections.clear();
+    createdRoomId = null;
+    const privateRoomCreated = document.getElementById('privateRoomCreated');
+    if (privateRoomCreated) privateRoomCreated.classList.add('hidden');
 
     if (brightnessInterval) {
         clearInterval(brightnessInterval);

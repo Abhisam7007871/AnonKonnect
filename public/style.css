@@ -100,6 +100,26 @@ body {
     display: none !important;
 }
 
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 5000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 20px;
+}
+
+.modal-overlay.hidden {
+    display: none !important;
+}
+
+.modal-content {
+    padding: 24px;
+    border-radius: 16px;
+}
+
 .text-center {
     text-align: center;
 }
@@ -189,6 +209,11 @@ body {
     display: flex;
     align-items: center;
     gap: 12px;
+    background: transparent;
+}
+
+.nav-container .logo img {
+    background-color: rgba(11, 15, 25, 0.98);
 }
 
 .nav-container .logo span {
@@ -1222,6 +1247,11 @@ body {
     align-items: center;
     gap: 12px;
     margin-bottom: 15px;
+    background: transparent;
+}
+
+.footer-brand .logo img {
+    background-color: var(--bg-secondary);
 }
 
 .footer-brand .logo span {
@@ -1377,11 +1407,13 @@ body {
     display: flex;
     align-items: center;
     gap: 12px;
+    background: transparent;
 }
 
 .session-top-bar-logo {
     height: 36px;
     width: auto;
+    background-color: rgba(11, 15, 25, 0.92);
 }
 
 .session-top-bar-peer {
@@ -2080,10 +2112,15 @@ emoji-picker {
     width: 76px;
     border-radius: 50%;
     object-fit: contain;
-    background: #000;
+    background-color: var(--bg-main);
     padding: 5px;
     border: 2px solid var(--primary);
     transition: all 0.3s ease;
+}
+
+/* Logo blend: so logo image background matches page/section (transparent PNG recommended for best results) */
+.logo-img-blend {
+    background-color: var(--bg-main);
 }
 
 /* NEW: Styles for SKIP/LEAVE in header */

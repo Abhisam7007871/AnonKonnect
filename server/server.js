@@ -9,6 +9,8 @@ require('dotenv').config();
 
 const { initMatchmaking, handleDisconnect } = require('./matchmaking');
 const { initSignaling } = require('./signaling');
+const { initRooms, handleRoomDisconnect } = require('./rooms');
+const { initRoomSignaling } = require('./roomSignaling');
 const rateLimit = require('express-rate-limit');
 
 const app = express();
@@ -84,9 +86,12 @@ io.on('connection', (socket) => {
     // Initialize module handlers
     initMatchmaking(io, socket, sessions, pubClient);
     initSignaling(io, socket, sessions, pubClient);
+    initRooms(io, socket);
+    initRoomSignaling(io, socket);
 
     socket.on('disconnect', () => {
         console.log(`User disconnected: ${socket.id}`);
+        handleRoomDisconnect(io, socket.id);
         handleDisconnect(io, socket, sessions, pubClient);
     });
 });

@@ -243,6 +243,14 @@ async function terminateSession(socket, sessionId, type, io, localSessions, redi
     await delSession(sessionId, localSessions, redis);
 
     setTimeout(async () => {
+        if (type === 'skip') {
+            const queue = await queueGetAll(mode, redis);
+            if (queue.length === 0) {
+                await forceMatch(io, peerData, actionUserData, mode, localSessions, redis);
+                return;
+            }
+        }
+
         await queuePush(mode, JSON.stringify(peerData), redis);
         io.to(peerId).emit('rejoining-queue');
 

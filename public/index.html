@@ -35,7 +35,7 @@
     <nav class="navbar" id="navbar">
         <div class="nav-container">
             <div class="logo">
-                <img src="logo.png" alt="AnonKonnect Logo" class="brand-logo-main">
+                <img src="logo.png" alt="AnonKonnect Logo" class="brand-logo-main logo-img-blend">
                 <span>AnonKonnect</span>
             </div>
             <div class="nav-links">
@@ -216,6 +216,24 @@
                         <button type="submit" class="btn-submit" id="startChatBtn">
                             Find a Partner <i class="ph ph-arrow-right"></i>
                         </button>
+
+                        <div class="private-room-section" style="margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--glass-border);">
+                            <label style="margin-bottom: 12px; display: block;">Private room (share a code, max 4 people):</label>
+                            <div class="private-room-actions" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+                                <button type="button" class="btn btn-outline" id="createPrivateRoomBtn" onclick="createPrivateRoom()">
+                                    <i class="ph ph-plus-circle"></i> Create private room
+                                </button>
+                                <input type="text" id="privateRoomCode" placeholder="Enter room code" maxlength="8" style="width: 140px; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--glass-border); background: var(--glass-bg); color: var(--text-primary); text-transform: uppercase;">
+                                <button type="button" class="btn btn-secondary" id="joinPrivateRoomBtn" onclick="joinPrivateRoom()">Join room</button>
+                            </div>
+                            <div id="privateRoomCreated" class="hidden" style="margin-top: 16px; padding: 16px; background: rgba(139, 92, 246, 0.1); border-radius: 12px; border: 1px solid var(--primary);">
+                                <p style="margin: 0 0 8px; font-weight: 600;">Your room code:</p>
+                                <p id="privateRoomCodeDisplay" style="font-size: 24px; letter-spacing: 4px; margin: 0 0 12px;"></p>
+                                <button type="button" class="btn btn-primary" onclick="copyRoomCode()"><i class="ph ph-copy"></i> Copy</button>
+                                <p style="margin: 12px 0 0; font-size: 13px; color: var(--text-secondary);">Share this code with others (max 4 people). Waiting for others to join...</p>
+                            </div>
+                            <p id="privateRoomError" class="hidden" style="margin-top: 8px; color: #ef4444; font-size: 14px;"></p>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -441,7 +459,7 @@
             <div class="footer-container">
                 <div class="footer-brand">
                     <div class="logo">
-                        <img src="logo.png" alt="AnonKonnect Logo" class="brand-logo-footer"> <span
+                        <img src="logo.png" alt="AnonKonnect Logo" class="brand-logo-footer logo-img-blend"> <span
                             class="brand-text">AnonKonnect</span>
                     </div>
                     <p>Anonymous chat platform built for fast and secure connections.</p>
@@ -503,7 +521,7 @@
             <!-- Session top bar: Skip/Leave/Chat always visible in video/audio mode (not hidden when chat collapsed) -->
             <div id="sessionTopBar" class="session-top-bar hidden">
                 <div class="session-top-bar-left">
-                    <img src="logo.png" alt="Logo" class="header-logo session-top-bar-logo">
+                    <img src="logo.png" alt="Logo" class="header-logo session-top-bar-logo logo-img-blend">
                     <span id="sessionTopBarPeerName" class="session-top-bar-peer">Stranger</span>
                 </div>
                 <div class="session-top-bar-actions">
@@ -515,6 +533,9 @@
                     </button>
                     <button class="icon-btn text-brand" onclick="toggleChatPanel()" title="Toggle Chat Panel">
                         <i class="ph-fill ph-chat-centered-text"></i> CHAT
+                    </button>
+                    <button type="button" class="tool-btn-header" id="createPrivateRoomInCallBtn" onclick="createPrivateRoomFromCall()" title="Create private room (share code with partner)">
+                        <i class="ph ph-key"></i> Private room
                     </button>
                 </div>
             </div>
@@ -539,7 +560,7 @@
             <div id="chatContainer" class="chat-wrapper glass-panel">
                 <div class="chat-header">
                     <div class="peer-status-block">
-                        <img src="logo.png" alt="AnonKonnect Logo" class="header-logo">
+                        <img src="logo.png" alt="AnonKonnect Logo" class="header-logo logo-img-blend">
                         <div>
                             <h3 id="peerName"><span class="brand-text" style="font-size: 18px;">AnonKonnect</span></h3>
                             <span class="status-indicator">Online</span>
@@ -626,6 +647,19 @@
                     Chat</button>
             </div>
 
+        </div>
+    </div>
+
+    <!-- Modal: Private room invite (in-call notification) -->
+    <div id="privateRoomInviteModal" class="modal-overlay hidden">
+        <div class="modal-content glass-panel" style="max-width: 420px;">
+            <h3 style="margin: 0 0 12px;">Private room created</h3>
+            <p id="privateRoomInviteMessage" style="color: var(--text-secondary); margin: 0 0 16px;"></p>
+            <p id="privateRoomInviteCode" style="font-size: 22px; letter-spacing: 3px; margin: 0 0 16px;"></p>
+            <div style="display: flex; gap: 10px;">
+                <button type="button" class="btn btn-primary" onclick="copyInviteRoomCode()"><i class="ph ph-copy"></i> Copy</button>
+                <button type="button" class="btn btn-secondary" onclick="closePrivateRoomInviteModal()">Close</button>
+            </div>
         </div>
     </div>
 
