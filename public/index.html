@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AnonKonnect - Meet Strangers Instantly</title>
+    <meta name="description"
+        content="Connect with people around the world through text, voice, or video while staying completely anonymous.">
+
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/feather-icons"></script>
+</head>
+
+<body>
+    <!-- Abstract background -->
+    <div class="background-blobs"></div>
+
+    <!-- 1. NAVIGATION BAR -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <img src="logo.png" alt="AnonKonnect Logo" style="height: 32px; width: auto; margin-right: 8px;">
+                <span>AnonKonnect</span>
+            </div>
+            <div class="nav-links">
+                <a href="#hero" class="active">Home</a>
+                <a href="#features">Features</a>
+                <a href="#how-it-works">How It Works</a>
+                <a href="#why-us">Why Choose Us</a>
+                <a href="#about">About</a>
+                <a href="#contact">Contact</a>
+            </div>
+            <div class="nav-actions">
+                <div id="connectionStatus" class="connection-status">
+                    <span class="dot"></span> <span class="status-text">Connecting...</span>
+                </div>
+            </div>
+            <button class="mobile-menu-btn" onclick="toggleMobileMenu()">
+                <i class="ph ph-list"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Content Wrapper (hides when in chat mode) -->
+    <div id="mainContent">
+
+        <!-- 2. HERO SECTION -->
+        <section id="hero" class="hero-section">
+            <div class="hero-bg-shapes">
+                <div class="shape shape-1"></div>
+                <div class="shape shape-2"></div>
+                <div class="shape shape-3"></div>
+            </div>
+
+            <div class="hero-container">
+                <div class="hero-content">
+                    <div class="hero-badge">🔒 100% Secure & Anonymous</div>
+                    <h1 class="hero-title">Meet Someone New with <span class="brand-text">AnonKonnect</span></h1>
+                    <p class="hero-subtitle">Connect with people around the world through text, voice, or video while
+                        staying completely anonymous. No registration required.</p>
+
+                    <div class="hero-buttons">
+                        <button class="btn btn-primary" onclick="scrollToForm('video')">
+                            <i class="ph ph-video-camera"></i> Start Video Chat
+                        </button>
+                        <button class="btn btn-secondary" onclick="scrollToForm('audio')">
+                            <i class="ph ph-microphone"></i> Start Audio Chat
+                        </button>
+                        <button class="btn btn-outline" onclick="scrollToForm('text')">
+                            <i class="ph ph-chat-text"></i> Start Text Chat
+                        </button>
+                    </div>
+
+                    <div class="hero-stats">
+                        <div class="stat">
+                            <span class="stat-value" id="onlineCount">1,204</span>
+                            <span class="stat-label">Users Online Now</span>
+                        </div>
+                        <div class="stat-divider"></div>
+                        <div class="stat">
+                            <span class="stat-value">0ms</span>
+                            <span class="stat-label">Matching Delay</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="hero-visual">
+                    <!-- Floating UI Preview Cards -->
+                    <div class="floating-card chat-card">
+                        <div class="card-header">
+                            <div class="avatar bg-pink"></div>
+                            <div class="user-info">
+                                <h4>Stranger (Female)</h4>
+                                <p>Online</p>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="message received">Hi! How are you doing? 👋</div>
+                            <div class="message sent">I'm good! Where are you from? 🌎</div>
+                            <div class="message received typing"><span></span><span></span><span></span></div>
+                        </div>
+                    </div>
+
+                    <div class="floating-card call-card">
+                        <div class="call-avatar">
+                            <i class="ph-fill ph-user"></i>
+                        </div>
+                        <div class="call-info">
+                            <h4>Connected</h4>
+                            <p>03:42</p>
+                        </div>
+                        <div class="call-controls">
+                            <button class="control mic active"><i class="ph ph-microphone"></i></button>
+                            <button class="control end"><i class="ph ph-phone-disconnect"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. USER ENTRY FORM (Integration Point for existing logic) -->
+        <section id="join-form" class="form-section">
+            <!-- RECONNECT BANNER -->
+            <div id="reconnectBanner" class="reconnect-banner glass-panel hidden" style="margin-bottom: 30px;">
+                <div class="reconnect-content">
+                    <h3 id="reconnectTitle">Reconnect to your last chat?</h3>
+                    <p>Time remaining: <span id="reconnectTimer" style="color: var(--primary); font-weight: bold;">60
+                            seconds</span></p>
+                </div>
+                <div class="reconnect-actions" style="display: flex; align-items: center; gap: 15px;">
+                    <button class="btn-submit" onclick="requestReconnect()" style="width: auto; padding: 10px 20px;">Go
+                        Back to Last Call</button>
+                    <button class="icon-btn" onclick="hideReconnectBanner()" style="color: var(--text-muted);"><i
+                            class="ph ph-x"></i></button>
+                </div>
+            </div>
+
+            <div class="form-container">
+                <div class="form-card glass-panel">
+                    <div class="form-header">
+                        <h2>Ready to Connect?</h2>
+                        <p>Fill out the details below to start your anonymous session.</p>
+                    </div>
+
+                    <form id="userInfoForm" onsubmit="handleInfoSubmit(event)">
+                        <div class="input-grid">
+                            <div class="form-group">
+                                <label for="nickname"><i class="ph ph-user"></i> Nickname</label>
+                                <input type="text" id="nickname" placeholder="e.g., MidnightRider" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="gender"><i class="ph ph-gender-intersex"></i> Gender</label>
+                                <div class="custom-select">
+                                    <select id="gender" required>
+                                        <option value="" disabled selected>Select your gender</option>
+                                        <option value="male">Male</option>
+                                        <option value="female">Female</option>
+                                        <option value="other">Other / Prefer not to say</option>
+                                    </select>
+                                    <i class="ph ph-caret-down select-icon"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label for="purpose"><i class="ph ph-target"></i> Purpose of Chat</label>
+                            <div class="custom-select">
+                                <select id="purpose" required>
+                                    <option value="" disabled selected>Why are you here?</option>
+                                    <option value="casual">Just chatting / Bored</option>
+                                    <option value="friends">Making new friends</option>
+                                    <option value="language">Language practice</option>
+                                    <option value="dating">Dating / Flirting</option>
+                                    <option value="advice">Seeking advice / Venting</option>
+                                </select>
+                                <i class="ph ph-caret-down select-icon"></i>
+                            </div>
+                        </div>
+
+                        <div class="mode-selection">
+                            <label>Select Connection Mode:</label>
+                            <div class="mode-cards-container">
+                                <div class="mode-card-mini selected" onclick="selectMode('video', this)">
+                                    <i class="ph-fill ph-video-camera"></i>
+                                    <span>Video</span>
+                                </div>
+                                <div class="mode-card-mini" onclick="selectMode('audio', this)">
+                                    <i class="ph-fill ph-microphone-stage"></i>
+                                    <span>Audio</span>
+                                </div>
+                                <div class="mode-card-mini" onclick="selectMode('text', this)">
+                                    <i class="ph-fill ph-chat-centered-text"></i>
+                                    <span>Text</span>
+                                </div>
+                            </div>
+                            <input type="hidden" id="selectedMode" value="video" required>
+                        </div>
+
+                        <button type="submit" class="btn-submit" id="startChatBtn">
+                            Find a Partner <i class="ph ph-arrow-right"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. HOW IT WORKS -->
+        <section id="how-it-works" class="steps-section">
+            <div class="section-header">
+                <h2>How It Works</h2>
+                <p>Start talking in seconds. No complex sign-ups.</p>
+            </div>
+
+            <div class="steps-container">
+                <div class="step-card">
+                    <div class="step-icon">
+                        <i class="ph ph-identification-card"></i>
+                        <span class="step-number">1</span>
+                    </div>
+                    <h3>Setup Identity</h3>
+                    <p>Enter a temporary nickname, gender, and your purpose for chatting. Keep it anonymous.</p>
+                </div>
+
+                <div class="step-connector"><i class="ph ph-arrow-right"></i></div>
+
+                <div class="step-card">
+                    <div class="step-icon">
+                        <i class="ph ph-arrows-merge"></i>
+                        <span class="step-number">2</span>
+                    </div>
+                    <h3>Instant Match</h3>
+                    <p>Our ultra-fast WebRTC signaling server instantly connects you with someone online globally.</p>
+                </div>
+
+                <div class="step-connector"><i class="ph ph-arrow-right"></i></div>
+
+                <div class="step-card">
+                    <div class="step-icon">
+                        <i class="ph ph-chats"></i>
+                        <span class="step-number">3</span>
+                    </div>
+                    <h3>Start Talking</h3>
+                    <p>Engage via text, high-quality audio, or face-to-face video. Skip anytime to find someone new.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. WHY CHOOSE US & 6. FEATURES -->
+        <section id="why-us" class="features-section">
+            <div class="section-header">
+                <h2 class="gradient-text">Why Choose AnonKonnect?</h2>
+                <p>Built for privacy, engineered for speed.</p>
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-box glass-panel">
+                    <div class="feature-icon icon-purple"><i class="ph-fill ph-lightning"></i></div>
+                    <h3>Instant Matching</h3>
+                    <p>Zero wait times. Connect with a stranger in milliseconds thanks to our optimized signaling
+                        queues.</p>
+                </div>
+
+                <div class="feature-box glass-panel">
+                    <div class="feature-icon icon-pink"><i class="ph-fill ph-mask-happy"></i></div>
+                    <h3>100% Anonymous</h3>
+                    <p>We don't log chats, store IP addresses, or require accounts. Your identity is your secret.</p>
+                </div>
+
+                <div class="feature-box glass-panel">
+                    <div class="feature-icon icon-blue"><i class="ph-fill ph-video-camera"></i></div>
+                    <h3>HD Video & Audio</h3>
+                    <p>Experience crystal clear peer-to-peer (P2P) connections that scale with your network quality.</p>
+                </div>
+
+                <div class="feature-box glass-panel">
+                    <div class="feature-icon icon-orange"><i class="ph-fill ph-skip-forward"></i></div>
+                    <h3>Skip Instantly</h3>
+                    <p>Not vibing? Click 'Skip' to instantly sever the connection and match with a new partner
+                        seamlessly.</p>
+                </div>
+
+                <div class="feature-box glass-panel">
+                    <div class="feature-icon icon-green"><i class="ph-fill ph-shield-check"></i></div>
+                    <h3>Safe Environment</h3>
+                    <p>Built-in one-click reporting tools help us keep the community clean from trolls and bots.</p>
+                </div>
+
+                <div class="feature-box glass-panel">
+                    <div class="feature-icon icon-teal"><i class="ph-fill ph-globe-hemisphere-west"></i></div>
+                    <h3>Global Community</h3>
+                    <p>Thousands of users from over 150 countries are online right now waiting to chat.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 7. WHAT MAKES US BETTER -->
+        <section class="comparison-section">
+            <div class="comparison-container glass-panel">
+                <div class="comparison-content">
+                    <h2>What Makes Us Better?</h2>
+                    <p>Unlike legacy chat sites that are slow and filled with bots, AnonKonnect is a modern platform
+                        built on WebRTC and WebSocket technologies.</p>
+
+                    <ul class="comparison-list">
+                        <li><i class="ph-fill ph-check-circle"></i> <span><strong>No Registration:</strong> Jump right
+                                into chatting.</span></li>
+                        <li><i class="ph-fill ph-check-circle"></i> <span><strong>Faster Matching:</strong> Our Redis
+                                queues are 10x faster.</span></li>
+                        <li><i class="ph-fill ph-check-circle"></i> <span><strong>Better Quality:</strong> True P2P
+                                connections prevent server lag.</span></li>
+                        <li><i class="ph-fill ph-check-circle"></i> <span><strong>Modern UI:</strong> A clean, fluid
+                                interface that feels like a native app.</span></li>
+                        <li><i class="ph-fill ph-check-circle"></i> <span><strong>Zero Tracking:</strong> No cross-site
+                                trackers or invasive ads.</span></li>
+                    </ul>
+                </div>
+                <div class="comparison-visual">
+                    <div class="visual-circle">
+                        <i class="ph-fill ph-rocket-launch"></i>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 8. CHAT PREVIEW SECTION -->
+        <section id="features" class="preview-section">
+            <div class="section-header">
+                <h2>Designed for Connection</h2>
+                <p>A beautiful interface across all devices and modes.</p>
+            </div>
+
+            <div class="preview-showcase">
+                <div class="preview-mockup text-mockup glass-panel">
+                    <div class="mockup-header">Text Chat</div>
+                    <div class="mockup-body">
+                        <div class="bubble peer">Hello from Tokyo! 😊</div>
+                        <div class="bubble self">Hi! I'm from New York. Nice to meet you.</div>
+                        <div class="bubble peer">How is the weather there?</div>
+                        <div class="input-bar">Type a message... <i class="ph-fill ph-paper-plane-right"></i></div>
+                    </div>
+                </div>
+
+                <div class="preview-mockup video-mockup glass-panel">
+                    <div class="mockup-header">Video Chat</div>
+                    <div class="mockup-grid">
+                        <div class="mock-cam peer-cam">
+                            <i class="ph-fill ph-user focus"></i>
+                            <span class="label">Stranger</span>
+                        </div>
+                        <div class="mock-cam self-cam">
+                            <i class="ph-fill ph-user"></i>
+                            <span class="label">You</span>
+                        </div>
+                    </div>
+                    <div class="mockup-controls">
+                        <div class="ctrl red">SKIP</div>
+                        <div class="ctrl"><i class="ph-fill ph-microphone"></i></div>
+                        <div class="ctrl"><i class="ph-fill ph-video-camera"></i></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 9. ABOUT US -->
+        <section id="about" class="about-section">
+            <div class="about-container glass-panel text-center">
+                <h2>About AnonKonnect</h2>
+                <div class="divider"></div>
+                <p>This platform was created to help people connect with strangers around the world in a simple and
+                    anonymous way. Whether you want to make friends, practice languages, or just have a random
+                    conversation, our platform makes it easy and instant. We believe that stepping out of your social
+                    bubble to talk to someone new can be a profoundly positive experience.</p>
+            </div>
+        </section>
+
+        <!-- 10. CONTACT US -->
+        <section id="contact" class="contact-section">
+            <div class="section-header">
+                <h2>Get in Touch</h2>
+                <p>Have feedback or need to report a bug? We'd love to hear from you.</p>
+            </div>
+
+            <div class="contact-container">
+                <div class="contact-info glass-panel">
+                    <h3>Contact Information</h3>
+                    <p>Reach out to us directly via email for support, business inquiries, or feature requests.</p>
+
+                    <div class="info-item">
+                        <i class="ph-fill ph-envelope-simple"></i>
+                        <div>
+                            <h4>Email Us</h4>
+                            <p>support@anonkonnect.com</p>
+                        </div>
+                    </div>
+
+                    <div class="info-item">
+                        <i class="ph-fill ph-twitter-logo"></i>
+                        <div>
+                            <h4>Twitter</h4>
+                            <p>@AnonKonnectApp</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="contact-form glass-panel">
+                    <form onsubmit="event.preventDefault(); alert('Message sent!');">
+                        <div class="form-group">
+                            <input type="text" placeholder="Your Name" required class="contact-input">
+                        </div>
+                        <div class="form-group">
+                            <input type="email" placeholder="Your Email" required class="contact-input">
+                        </div>
+                        <div class="form-group">
+                            <textarea placeholder="Your Message" rows="4" required class="contact-input"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Send Message</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- 11. FOOTER -->
+        <footer class="footer">
+            <div class="footer-container">
+                <div class="footer-brand">
+                    <div class="logo">
+                        <img src="logo.png" alt="AnonKonnect Logo"
+                            style="height: 32px; width: auto; margin-right: 8px;"> <span
+                            class="brand-text">AnonKonnect</span>
+                    </div>
+                    <p>Anonymous chat platform built for fast and secure connections.</p>
+                </div>
+
+                <div class="footer-links">
+                    <div class="link-column">
+                        <h4>Platform</h4>
+                        <a href="#" onclick="scrollToForm('text')">Text Chat</a>
+                        <a href="#" onclick="scrollToForm('audio')">Audio Chat</a>
+                        <a href="#" onclick="scrollToForm('video')">Video Chat</a>
+                    </div>
+
+                    <div class="link-column">
+                        <h4>Company</h4>
+                        <a href="#about">About Us</a>
+                        <a href="#contact">Contact</a>
+                        <a href="#why-us">Why Us</a>
+                    </div>
+
+                    <div class="link-column">
+                        <h4>Legal</h4>
+                        <a href="#">Privacy Policy</a>
+                        <a href="#">Terms of Service</a>
+                        <a href="#">Community Guidelines</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p>&copy; 2026 AnonKonnect. All rights reserved.</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Active App Screens (Hidden initially, shown by JS when chatting) -->
+
+    <!-- Waiting Screen -->
+    <div id="waitingScreen" class="app-screen hidden glass-panel fullscreen">
+        <div class="waiting-content">
+            <div class="radar-animation">
+                <div class="radar-circle"></div>
+                <div class="radar-circle"></div>
+                <div class="radar-circle"></div>
+                <i class="ph-fill ph-magnifying-glass"></i>
+            </div>
+            <h2 id="waitingText">Looking for a stranger...</h2>
+            <p id="queueInfo">Connecting you to the global network.</p>
+            <button class="btn btn-outline cancel-btn" onclick="cancelWaiting()">
+                <i class="ph ph-x"></i> Cancel Search
+            </button>
+        </div>
+    </div>
+
+    <!-- Chat Session Screen -->
+    <div id="chatScreen" class="app-screen hidden fullscreen">
+        <div class="chat-layout">
+
+            <!-- A/V Area (SDE-4 Upgrade: Side-by-Side Grid) -->
+            <div id="mediaContainer" class="media-container hidden glass-panel">
+                <div class="video-grid-premium">
+                    <div class="video-item local">
+                        <video id="localVideo" autoplay playsinline muted></video>
+                        <div class="v-label">You</div>
+                    </div>
+                    <div class="video-item remote">
+                        <video id="remoteVideo" autoplay playsinline></video>
+                        <div class="v-label" id="remoteLabel">Stranger</div>
+                        <div class="media-overlay" id="remoteMediaState">Waiting for partner...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Area -->
+            <div id="chatContainer" class="chat-wrapper glass-panel">
+                <div class="chat-header">
+                    <div class="peer-status-block">
+                        <img src="logo.png" alt="AnonKonnect Logo" class="header-logo">
+                        <div>
+                            <h3 id="peerName"><span class="brand-text" style="font-size: 18px;">AnonKonnect</span></h3>
+                            <span class="status-indicator">Online</span>
+                        </div>
+                    </div>
+
+                    <div class="chat-actions">
+                        <button id="chatToggleBtn" class="icon-btn text-brand" onclick="toggleChatPanel()"
+                            title="Toggle Chat Panel">
+                            <i class="ph-fill ph-chat-centered-text"></i> CHAT
+                        </button>
+                    </div>
+                </div>
+
+                <div class="messages-area" id="messages">
+                    <div class="system-message info">You are now chatting with a random stranger. Say hi!</div>
+                </div>
+
+                <div class="typing-indicator" id="typingIndicator">Stranger is typing...</div>
+
+                <!-- Pickers Overlay Area -->
+                <div id="emojiPickerContainer" class="picker-container hidden">
+                    <emoji-picker></emoji-picker>
+                </div>
+
+                <div id="gifPickerContainer" class="picker-container hidden glass-panel">
+                    <div class="picker-header">
+                        <input type="text" id="gifSearchInput" placeholder="Search Tenor GIFs..."
+                            onkeyup="searchGifs(event)">
+                        <button class="icon-btn" onclick="toggleGifPicker()"><i class="ph ph-x"></i></button>
+                    </div>
+                    <div id="gifGrid" class="picker-grid"></div>
+                </div>
+
+                <div id="stickerPickerContainer" class="picker-container hidden glass-panel">
+                    <div class="picker-header">
+                        <span>Stickers</span>
+                        <button class="icon-btn" onclick="toggleStickerPicker()"><i class="ph ph-x"></i></button>
+                    </div>
+                    <div id="stickerGrid" class="picker-grid"></div>
+                </div>
+
+                <div class="input-area">
+                    <button class="btn-skip" onclick="skipUser()" title="Skip to next user">
+                        SKIP <i class="ph-bold ph-fast-forward"></i>
+                    </button>
+
+                    <div class="input-wrapper w-100">
+                        <div class="chat-toolbar">
+                            <button id="emojiBtn" class="toolbar-btn" onclick="toggleEmojiPicker()" title="Emoji"><i
+                                    class="ph-bold ph-smiley"></i></button>
+                            <button id="gifBtn" class="toolbar-btn" onclick="toggleGifPicker()" title="GIFs"><i
+                                    class="ph-bold ph-gif"></i></button>
+                            <button id="stickerBtn" class="toolbar-btn" onclick="toggleStickerPicker()"
+                                title="Stickers"><i class="ph-bold ph-sticker"></i></button>
+                            <span id="recordingIndicator" class="hidden text-brand"><i class="ph-fill ph-record"></i>
+                                Recording...</span>
+                        </div>
+                        <div class="input-box">
+                            <input type="text" id="messageInput" placeholder="Type a message..."
+                                onkeypress="handleMessageKeyPress(event)" autocomplete="off">
+                            <button class="btn-voice" id="voiceBtn" title="Hold to Record"
+                                onmousedown="startVoiceRecording()" onmouseup="stopVoiceRecording()"
+                                onmouseleave="cancelVoiceRecording()"><i class="ph-fill ph-microphone"></i></button>
+                            <button class="btn-send" onclick="sendMessage()"><i
+                                    class="ph-fill ph-paper-plane-right"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SDE-4 Feature: Bottom Premium Control Bar -->
+            <div class="premium-toolbar">
+                <button class="tool-btn" onclick="toggleAudio()" id="tool-mic"><i class="ph-fill ph-microphone"></i>
+                    Mute</button>
+                <button class="tool-btn" onclick="toggleVideo()" id="tool-cam"><i class="ph-fill ph-video-camera"></i>
+                    Cam</button>
+                <button class="tool-btn" onclick="toggleChatPanel()" id="tool-chat"><i
+                        class="ph-fill ph-chat-centered-text"></i>
+                    Chat</button>
+                <button class="tool-btn skip-glow" onclick="skipUser()"><i class="ph-bold ph-fast-forward"></i>
+                    SKIP</button>
+                <button class="tool-btn danger" onclick="exitToHome()"><i class="ph-bold ph-sign-out"></i>
+                    LEAVE</button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>
