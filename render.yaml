@@ -1,0 +1,16 @@
+# Render Blueprint: Backend (signaling server) as a Web Service
+# Use this when connecting the repo to Render so the backend runs Node.js, not a static site.
+# Dashboard: create new "Web Service", connect this repo; Render can use this spec.
+
+services:
+  - type: web
+    runtime: node
+    name: anonkonnect-server
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: FRONTEND_URL
+        sync: false
+        # Set in Render Dashboard to: https://anonkonnect.onrender.com (no trailing slash)
+        # Or leave unset to allow all origins
