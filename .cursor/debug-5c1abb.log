@@ -108,3 +108,26 @@
 {"sessionId":"5c1abb","location":"app.js:disconnect","message":"signaling disconnected","data":{"reason":"transport close"},"timestamp":1773492990722,"hypothesisId":"H3"}
 {"sessionId":"5c1abb","location":"app.js:connect","message":"signaling connected","data":{},"timestamp":1773492992561,"hypothesisId":"H1"}
 {"sessionId":"5c1abb","location":"app.js:handleInfoSubmit","message":"submit connection check","data":{"hasSocket":true,"socketConnected":true,"timeSinceLoadMs":1672581},"timestamp":1773493073310,"hypothesisId":"H2"}
+{"sessionId":"5c1abb","location":"app.js:disconnect","message":"signaling disconnected","data":{"reason":"transport close"},"timestamp":1773493756920,"hypothesisId":"H3"}
+{"sessionId":"5c1abb","location":"app.js:connect","message":"signaling connected","data":{},"timestamp":1773493758554,"hypothesisId":"H1"}
+{"sessionId":"5c1abb","location":"app.js:connectToServer","message":"signaling connection attempt","data":{"signalingUrl":"https://anonkonnect.onrender.com","hostname":"anonkonnect.onrender.com","origin":"https://anonkonnect.onrender.com"},"timestamp":1773493764875,"hypothesisId":"H4"}
+{"sessionId":"5c1abb","location":"app.js:connect","message":"signaling connected","data":{},"timestamp":1773493765101,"hypothesisId":"H1"}
+{"sessionId":"5c1abb","location":"app.js:handleInfoSubmit","message":"submit connection check","data":{"hasSocket":true,"socketConnected":true,"timeSinceLoadMs":9679},"timestamp":1773493774268,"hypothesisId":"H2"}
+{"sessionId":"5c1abb","location":"app.js:handleInfoSubmit","message":"submit connection check","data":{"hasSocket":true,"socketConnected":true,"timeSinceLoadMs":38993},"timestamp":1773493803582,"hypothesisId":"H2"}
+{"sessionId":"5c1abb","location":"app.js:handleInfoSubmit","message":"submit connection check","data":{"hasSocket":true,"socketConnected":true,"timeSinceLoadMs":110762},"timestamp":1773493875351,"hypothesisId":"H2"}
+{"sessionId":"5c1abb","location":"app.js:handleInfoSubmit","message":"submit connection check","data":{"hasSocket":true,"socketConnected":true,"timeSinceLoadMs":257894},"timestamp":1773494022483,"hypothesisId":"H2"}
+{"sessionId":"5c1abb","location":"app.js:handleInfoSubmit","message":"submit connection check","data":{"hasSocket":true,"socketConnected":true,"timeSinceLoadMs":279703},"timestamp":1773494044292,"hypothesisId":"H2"}
+{"sessionId":"5c1abb","location":"app.js:handleInfoSubmit","message":"submit connection check","data":{"hasSocket":true,"socketConnected":true,"timeSinceLoadMs":290378},"timestamp":1773494054967,"hypothesisId":"H2"}
+{"sessionId":"5c1abb","location":"app.js:handleInfoSubmit","message":"submit connection check","data":{"hasSocket":true,"socketConnected":true,"timeSinceLoadMs":366848},"timestamp":1773494131437,"hypothesisId":"H2"}
+{"sessionId":"5c1abb","location":"app.js:connectToServer","message":"signaling connection attempt","data":{"signalingUrl":"https://anonkonnect.onrender.com","hostname":"anonkonnect.onrender.com","origin":"https://anonkonnect.onrender.com"},"timestamp":1773494196492,"hypothesisId":"H4"}
+{"sessionId":"5c1abb","location":"app.js:connect","message":"signaling connected","data":{},"timestamp":1773494196722,"hypothesisId":"H1"}
+{"sessionId":"5c1abb","location":"app.js:connectToServer","message":"signaling connection attempt","data":{"signalingUrl":"https://anonkonnect.onrender.com","hostname":"anonkonnect.onrender.com","origin":"https://anonkonnect.onrender.com"},"timestamp":1773494260110,"hypothesisId":"H4"}
+{"sessionId":"5c1abb","location":"app.js:connect","message":"signaling connected","data":{},"timestamp":1773494260374,"hypothesisId":"H1"}
+{"sessionId":"5c1abb","location":"app.js:handleInfoSubmit","message":"submit connection check","data":{"hasSocket":true,"socketConnected":true,"timeSinceLoadMs":18533},"timestamp":1773494277984,"hypothesisId":"H2"}
+{"sessionId":"5c1abb","location":"app.js:handleInfoSubmit","message":"submit connection check","data":{"hasSocket":true,"socketConnected":true,"timeSinceLoadMs":22615},"timestamp":1773494282066,"hypothesisId":"H2"}
+{"sessionId":"5c1abb","location":"app.js:handleInfoSubmit","message":"submit connection check","data":{"hasSocket":true,"socketConnected":true,"timeSinceLoadMs":28486},"timestamp":1773494287937,"hypothesisId":"H2"}
+{"sessionId":"5c1abb","location":"app.js:handleInfoSubmit","message":"submit connection check","data":{"hasSocket":true,"socketConnected":true,"timeSinceLoadMs":103933},"timestamp":1773494363384,"hypothesisId":"H2"}
+{"sessionId":"5c1abb","location":"app.js:handleInfoSubmit","message":"submit connection check","data":{"hasSocket":true,"socketConnected":true,"timeSinceLoadMs":122178},"timestamp":1773494381629,"hypothesisId":"H2"}
+{"sessionId":"5c1abb","location":"app.js:connectToServer","message":"signaling connection attempt","data":{"signalingUrl":"https://anonkonnect.onrender.com","hostname":"anonkonnect.onrender.com","origin":"https://anonkonnect.onrender.com"},"timestamp":1773494398215,"hypothesisId":"H4"}
+{"sessionId":"5c1abb","location":"app.js:connect","message":"signaling connected","data":{},"timestamp":1773494398623,"hypothesisId":"H1"}
+{"sessionId":"5c1abb","location":"app.js:handleInfoSubmit","message":"submit connection check","data":{"hasSocket":true,"socketConnected":true,"timeSinceLoadMs":14976},"timestamp":1773494412885,"hypothesisId":"H2"}

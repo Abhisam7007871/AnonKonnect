@@ -14,16 +14,16 @@
 
     <!-- Vercel Web Analytics: load ONLY on Vercel; never on Render (avoids 404 + MIME error) -->
     <script>
-      (function() {
-        var h = (window.location.hostname || '').toLowerCase();
-        var isVercel = (h.includes('vercel.app') || h.endsWith('.vercel.app')) && !h.includes('onrender.com');
-        if (isVercel) {
-          var s = document.createElement('script');
-          s.defer = true;
-          s.src = '/_vercel/insights/script.js';
-          document.head.appendChild(s);
-        }
-      })();
+        (function () {
+            var h = (window.location.hostname || '').toLowerCase();
+            var isVercel = (h.includes('vercel.app') || h.endsWith('.vercel.app')) && !h.includes('onrender.com');
+            if (isVercel) {
+                var s = document.createElement('script');
+                s.defer = true;
+                s.src = '/_vercel/insights/script.js';
+                document.head.appendChild(s);
+            }
+        })();
     </script>
 </head>
 
@@ -35,7 +35,8 @@
     <nav class="navbar" id="navbar">
         <div class="nav-container">
             <div class="logo">
-                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect fill='%236366f1' width='32' height='32' rx='6'/%3E%3Ctext x='16' y='22' font-size='14' font-weight='bold' fill='white' text-anchor='middle' font-family='system-ui,sans-serif'%3EAK%3C/text%3E%3C/svg%3E" alt="AnonKonnect Logo" style="height: 32px; width: auto; margin-right: 8px;">
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect fill='%236366f1' width='32' height='32' rx='6'/%3E%3Ctext x='16' y='22' font-size='14' font-weight='bold' fill='white' text-anchor='middle' font-family='system-ui,sans-serif'%3EAK%3C/text%3E%3C/svg%3E"
+                    alt="AnonKonnect Logo" class="brand-logo-main">
                 <span>AnonKonnect</span>
             </div>
             <div class="nav-links">
@@ -441,8 +442,8 @@
             <div class="footer-container">
                 <div class="footer-brand">
                     <div class="logo">
-                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect fill='%236366f1' width='32' height='32' rx='6'/%3E%3Ctext x='16' y='22' font-size='14' font-weight='bold' fill='white' text-anchor='middle' font-family='system-ui,sans-serif'%3EAK%3C/text%3E%3C/svg%3E" alt="AnonKonnect Logo"
-                            style="height: 32px; width: auto; margin-right: 8px;"> <span
+                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect fill='%236366f1' width='32' height='32' rx='6'/%3E%3Ctext x='16' y='22' font-size='14' font-weight='bold' fill='white' text-anchor='middle' font-family='system-ui,sans-serif'%3EAK%3C/text%3E%3C/svg%3E"
+                            alt="AnonKonnect Logo" class="brand-logo-footer"> <span
                             class="brand-text">AnonKonnect</span>
                     </div>
                     <p>Anonymous chat platform built for fast and secure connections.</p>
@@ -520,7 +521,8 @@
             <div id="chatContainer" class="chat-wrapper glass-panel">
                 <div class="chat-header">
                     <div class="peer-status-block">
-                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect fill='%236366f1' width='32' height='32' rx='6'/%3E%3Ctext x='16' y='22' font-size='14' font-weight='bold' fill='white' text-anchor='middle' font-family='system-ui,sans-serif'%3EAK%3C/text%3E%3C/svg%3E" alt="AnonKonnect Logo" class="header-logo">
+                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect fill='%236366f1' width='32' height='32' rx='6'/%3E%3Ctext x='16' y='22' font-size='14' font-weight='bold' fill='white' text-anchor='middle' font-family='system-ui,sans-serif'%3EAK%3C/text%3E%3C/svg%3E"
+                            alt="AnonKonnect Logo" class="header-logo">
                         <div>
                             <h3 id="peerName"><span class="brand-text" style="font-size: 18px;">AnonKonnect</span></h3>
                             <span class="status-indicator">Online</span>
@@ -528,6 +530,12 @@
                     </div>
 
                     <div class="chat-actions">
+                        <button class="tool-btn-header skip-glow" onclick="skipUser()">
+                            <i class="ph-bold ph-fast-forward"></i> SKIP
+                        </button>
+                        <button class="tool-btn-header danger" onclick="exitToHome()">
+                            <i class="ph-bold ph-sign-out"></i> LEAVE
+                        </button>
                         <button id="chatToggleBtn" class="icon-btn text-brand" onclick="toggleChatPanel()"
                             title="Toggle Chat Panel">
                             <i class="ph-fill ph-chat-centered-text"></i> CHAT
@@ -564,9 +572,7 @@
                 </div>
 
                 <div class="input-area">
-                    <button class="btn-skip" onclick="skipUser()" title="Skip to next user">
-                        SKIP <i class="ph-bold ph-fast-forward"></i>
-                    </button>
+                    <!-- Skip button removed from here to header -->
 
                     <div class="input-wrapper w-100">
                         <div class="chat-toolbar">
@@ -592,7 +598,7 @@
                 </div>
             </div>
 
-            <!-- SDE-4 Feature: Bottom Premium Control Bar -->
+            <!-- SDE-4 Feature: Bottom Premium Control Bar (Only Mute/Cam/Chat now as Skip/Leave moved to top) -->
             <div class="premium-toolbar">
                 <button class="tool-btn" onclick="toggleAudio()" id="tool-mic"><i class="ph-fill ph-microphone"></i>
                     Mute</button>
@@ -601,10 +607,6 @@
                 <button class="tool-btn" onclick="toggleChatPanel()" id="tool-chat"><i
                         class="ph-fill ph-chat-centered-text"></i>
                     Chat</button>
-                <button class="tool-btn skip-glow" onclick="skipUser()"><i class="ph-bold ph-fast-forward"></i>
-                    SKIP</button>
-                <button class="tool-btn danger" onclick="exitToHome()"><i class="ph-bold ph-sign-out"></i>
-                    LEAVE</button>
             </div>
 
         </div>
@@ -616,11 +618,11 @@
     <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
     <!-- Emoji picker loaded dynamically to avoid ESM resolution issues (index.js → database.js default export error when base URL is the app origin) -->
     <script type="module">
-      window.loadEmojiPicker = function () {
-        return import('https://cdn.jsdelivr.net/npm/emoji-picker-element@1/index.js').catch(function () {
-          console.warn('[CLIENT] Emoji picker failed to load');
-        });
-      };
+        window.loadEmojiPicker = function () {
+            return import('https://cdn.jsdelivr.net/npm/emoji-picker-element@1/index.js').catch(function () {
+                console.warn('[CLIENT] Emoji picker failed to load');
+            });
+        };
     </script>
     <script src="app.js"></script>
 </body>

@@ -374,6 +374,12 @@ async function handleMatchFound(data) {
     const chatLayout = document.querySelector('.chat-layout');
     const chatContainer = document.getElementById('chatContainer');
 
+    // ISSUE 3 FIX: Apply mode class to layout for CSS targeting
+    if (chatLayout) {
+        chatLayout.classList.remove('text-mode', 'audio-mode', 'video-mode');
+        chatLayout.classList.add(`${data.mode}-mode`);
+    }
+
     if (data.mode === 'video' || data.mode === 'audio') {
         mediaContainer.classList.remove('hidden');
         chatLayout.classList.add('has-media');
@@ -450,7 +456,8 @@ async function initializeWebRTC(data) {
         }
     };
 
-    // ── Trickle ICE: Send candidates IMMEDIATELY (don't wait for gathering) ──
+    // ── ICE candidate buffering ──
+    const candidateBuffer = [];
     peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
             socket.emit('ice-candidate', {
@@ -460,6 +467,61 @@ async function initializeWebRTC(data) {
             });
         }
     };
+
+    // ── Signal handling: Buffer candidates if remoteDescription is not set ──
+    socket.off('ice-candidate').on('ice-candidate', async (data) => {
+        if (!peerConnection) return;
+        try {
+            if (peerConnection.remoteDescription && peerConnection.remoteDescription.type) {
+                await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+            } else {
+                candidateBuffer.push(data.candidate);
+                console.log('[CLIENT] ICE candidate buffered (remoteDescription not set)');
+            }
+        } catch (e) {
+            console.error('[CLIENT] ICE candidate error:', e);
+        }
+    });
+
+    socket.off('offer').on('offer', async (data) => {
+        console.log('[CLIENT] Offer received');
+        if (!peerConnection) return;
+        try {
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+            socket.emit('answer', {
+                to: currentPeerId,
+                answer: peerConnection.localDescription,
+                sessionId: currentSessionId
+            });
+
+            // Process buffered candidates
+            while (candidateBuffer.length > 0) {
+                const cand = candidateBuffer.shift();
+                await peerConnection.addIceCandidate(new RTCIceCandidate(cand));
+                console.log('[CLIENT] Buffered ICE candidate processed');
+            }
+        } catch (e) {
+            console.error('[CLIENT] Offer handling error:', e);
+        }
+    });
+
+    socket.off('answer').on('answer', async (data) => {
+        console.log('[CLIENT] Answer received');
+        if (!peerConnection) return;
+        try {
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+            // Process buffered candidates
+            while (candidateBuffer.length > 0) {
+                const cand = candidateBuffer.shift();
+                await peerConnection.addIceCandidate(new RTCIceCandidate(cand));
+                console.log('[CLIENT] Buffered ICE candidate processed');
+            }
+        } catch (e) {
+            console.error('[CLIENT] Answer handling error:', e);
+        }
+    });
 
     // ── ICE connection state tracking (fast failure detection) ──
     peerConnection.oniceconnectionstatechange = () => {

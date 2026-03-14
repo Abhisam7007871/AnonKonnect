@@ -2009,18 +2009,66 @@ emoji-picker {
     background: #000;
     padding: 5px;
     border: 2px solid var(--primary);
+    transition: all 0.3s ease;
 }
 
-/* Text-mode: toolbar sticks to top, doesn't overlap input */
+/* NEW: Styles for SKIP/LEAVE in header */
+.chat-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.tool-btn-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.tool-btn-header.skip-glow {
+    background: var(--primary);
+    color: white;
+    box-shadow: 0 4px 15px rgba(var(--primary-rgb), 0.3);
+}
+
+.tool-btn-header.danger {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+}
+
+.tool-btn-header.danger:hover {
+    background: #ef4444;
+    color: white;
+}
+
+/* LOGO SCALE FIXES */
+.brand-logo-main {
+    height: 64px !important;
+    width: auto;
+}
+
+.brand-logo-footer {
+    height: 48px !important;
+    width: auto;
+}
+
+/* Text-mode: Ensure toolbar doesn't overlap input */
 .chat-layout.text-mode .premium-toolbar {
-    position: sticky;
-    top: 0;
-    bottom: auto;
-    transform: none;
-    left: auto;
-    border-radius: 12px 12px 0 0;
-    justify-content: center;
-    width: 100%;
+    display: none;
+    /* Already have skip/leave at top */
+}
+
+.input-area {
+    padding-bottom: env(safe-area-inset-bottom, 20px);
 }
 
 @media (max-width: 992px) {
@@ -2029,12 +2077,12 @@ emoji-picker {
     }
 
     .premium-toolbar {
-        bottom: 20px;
-        padding: 8px 15px;
-        gap: 8px;
+        bottom: 15px;
+        padding: 6px 12px;
+        gap: 6px;
     }
 
-    .tool-btn span {
+    .tool-btn-header span {
         display: none;
     }
 
@@ -2042,12 +2090,25 @@ emoji-picker {
         height: 48px;
         width: 48px;
     }
+
+    .brand-logo-main {
+        height: 48px !important;
+    }
 }
 
 @media (max-width: 576px) {
     .header-logo {
         height: 40px;
         width: 40px;
+    }
+
+    .chat-actions {
+        gap: 5px;
+    }
+
+    .tool-btn-header {
+        padding: 6px 10px;
+        font-size: 11px;
     }
 }
 
