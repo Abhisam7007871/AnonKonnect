@@ -610,8 +610,16 @@
                 </div>
 
                 <div class="input-area">
-                    <!-- Skip button removed from here to header -->
-
+                    <span class="input-area-label">Emoji &amp; more</span>
+                    <div class="emoji-quick-strip" id="emojiQuickStrip" title="Click to add to message">
+                        <button type="button" class="emoji-quick-btn" onclick="insertQuickEmoji('😀')">😀</button>
+                        <button type="button" class="emoji-quick-btn" onclick="insertQuickEmoji('❤️')">❤️</button>
+                        <button type="button" class="emoji-quick-btn" onclick="insertQuickEmoji('👍')">👍</button>
+                        <button type="button" class="emoji-quick-btn" onclick="insertQuickEmoji('😂')">😂</button>
+                        <button type="button" class="emoji-quick-btn" onclick="insertQuickEmoji('🔥')">🔥</button>
+                        <button type="button" class="emoji-quick-btn" onclick="insertQuickEmoji('👋')">👋</button>
+                        <button type="button" class="emoji-quick-btn" onclick="insertQuickEmoji('🎉')">🎉</button>
+                    </div>
                     <div class="input-wrapper w-100">
                         <div class="chat-toolbar">
                             <button id="emojiBtn" class="toolbar-btn" onclick="toggleEmojiPicker()" title="Emoji"><i

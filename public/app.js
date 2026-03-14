@@ -882,6 +882,9 @@ async function initializeWebRTC(data) {
         if (state === 'connected' || state === 'completed') {
             const overlay = document.getElementById('remoteMediaState');
             if (overlay) overlay.style.display = 'none';
+            if (remoteVideo && remoteVideo.srcObject) remoteVideo.play().catch(() => {});
+            const remoteAudioEl = document.getElementById('remoteAudio');
+            if (remoteAudioEl && remoteAudioEl.srcObject) remoteAudioEl.play().catch(() => {});
         }
     };
 
@@ -1231,6 +1234,13 @@ function initEmojiPicker() {
     });
 }
 initEmojiPicker();
+
+function insertQuickEmoji(emoji) {
+    if (messageInput) {
+        messageInput.value += emoji;
+        messageInput.focus();
+    }
+}
 
 function toggleEmojiPicker() {
     document.getElementById('emojiPickerContainer').classList.toggle('hidden');

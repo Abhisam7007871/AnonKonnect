@@ -1724,6 +1724,39 @@ video {
     cursor: pointer;
 }
 
+/* Input area label and quick emoji strip (text chat emoji section) */
+.input-area-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.emoji-quick-strip {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.emoji-quick-btn {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    font-size: 20px;
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.emoji-quick-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    transform: scale(1.08);
+}
+
 /* Rich Chat Toolbar & Pickers */
 .chat-toolbar {
     display: flex;
