@@ -12,6 +12,35 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/regular/style.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/fill/style.css">
+
+    <!-- Vercel Web Analytics: load ONLY on Vercel; never on Render (avoids 404 + MIME error) -->
+    <script>
+        (function () {
+            var h = (window.location.hostname || '').toLowerCase();
+            var isVercel = (h.includes('vercel.app') || h.endsWith('.vercel.app')) && !h.includes('onrender.com');
+            if (isVercel) {
+                var s = document.createElement('script');
+                s.defer = true;
+                s.src = '/_vercel/insights/script.js';
+                document.head.appendChild(s);
+            }
+        })();
+    </script>
+
+    <!-- Vercel Speed Insights: load ONLY on Vercel -->
+    <script>
+        (function () {
+            var h = (window.location.hostname || '').toLowerCase();
+            var isVercel = (h.includes('vercel.app') || h.endsWith('.vercel.app')) && !h.includes('onrender.com');
+            if (isVercel) {
+                window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
+                var s = document.createElement('script');
+                s.defer = true;
+                s.src = '/_vercel/speed-insights/script.js';
+                document.head.appendChild(s);
+            }
+        })();
+    </script>
 </head>
 
 <body>
