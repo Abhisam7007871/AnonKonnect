@@ -66,6 +66,23 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) {
         console.warn('[CLIENT] Failed to apply mode deep-link:', e);
     }
+
+    // Keep marketing \"Designed for Connection\" video card time in sync with user's local clock
+    try {
+        const timerEls = document.querySelectorAll('.video-timer');
+        if (timerEls.length) {
+            const updateClock = () => {
+                const now = new Date();
+                const hours = now.getHours().toString().padStart(2, '0');
+                const minutes = now.getMinutes().toString().padStart(2, '0');
+                timerEls.forEach(el => el.textContent = `${hours}:${minutes}`);
+            };
+            updateClock();
+            setInterval(updateClock, 60 * 1000);
+        }
+    } catch (e) {
+        console.warn('[CLIENT] Failed to update preview video clock:', e);
+    }
 });
 
 // Smooth scrolling for navigation

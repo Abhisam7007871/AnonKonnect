@@ -1611,7 +1611,7 @@ body {
 
 /* When session top bar is visible (video/audio), add top padding so content is not under the bar */
 .chat-layout.has-media {
-    padding-top: 60px;
+    padding-top: 80px;
 }
 
 .media-container {
@@ -2186,7 +2186,7 @@ emoji-picker {
     }
 
     .chat-layout.has-media {
-        padding-top: 56px;
+        padding-top: 88px;
     }
 
     .chat-wrapper {
