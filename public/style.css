@@ -2143,7 +2143,7 @@ emoji-picker {
     }
 
     .hero-visual {
-        height: 400px;
+        height: 420px;
     }
 
     .chat-card {
@@ -2190,7 +2190,7 @@ emoji-picker {
     }
 
     .chat-wrapper {
-        height: 60vh;
+        height: 40vh;
         min-height: 0;
         border-radius: 0;
         border: none;
@@ -2198,7 +2198,7 @@ emoji-picker {
     }
 
     .media-container {
-        height: 40vh;
+        height: 60vh;
         min-height: 0;
         flex: none;
         border-radius: 0;
@@ -2226,6 +2226,26 @@ emoji-picker {
         font-size: 42px;
     }
 
+    /* Stack floating hero cards on small screens (no overlap) */
+    .hero-visual {
+        height: auto;
+        margin-top: 32px;
+    }
+
+    .floating-card {
+        position: static;
+        width: 100%;
+        max-width: 320px;
+        margin: 0 auto 16px;
+        animation: none;
+    }
+
+    .chat-card,
+    .call-card {
+        width: 100%;
+        max-width: 320px;
+    }
+
     .input-grid {
         grid-template-columns: 1fr;
         gap: 16px;
@@ -2236,7 +2256,21 @@ emoji-picker {
     }
 
     .mode-cards-container {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .mode-card-mini {
+        padding: 14px 8px;
+    }
+
+    .mode-card-mini i {
+        font-size: 24px;
+        margin-bottom: 4px;
+    }
+
+    .mode-card-mini span {
+        font-size: 13px;
     }
 
     .footer-container {

@@ -934,6 +934,10 @@ async function handleMatchFound(data) {
     currentSessionId = data.sessionId;
     currentPeerId = data.peerId;
 
+    // Start call timer
+    window.__anonCallStartedAt = Date.now();
+    startSessionTimer();
+
     if (peerNameEl) {
         peerNameEl.textContent = data.peerPreferences?.nickname || 'Stranger';
     }
@@ -1003,6 +1007,26 @@ async function handleMatchFound(data) {
     showChatScreen();
 }
 
+let sessionTimerInterval = null;
+
+function startSessionTimer() {
+    clearInterval(sessionTimerInterval);
+    const timerEl = document.getElementById('sessionTimer');
+    if (!timerEl) return;
+    const startedAt = window.__anonCallStartedAt || Date.now();
+    const format = (n) => (n < 10 ? '0' + n : '' + n);
+    sessionTimerInterval = setInterval(() => {
+        const diffMs = Date.now() - startedAt;
+        const totalSec = Math.max(0, Math.floor(diffMs / 1000));
+        const hours = Math.floor(totalSec / 3600);
+        const minutes = Math.floor((totalSec % 3600) / 60);
+        const seconds = totalSec % 60;
+        timerEl.textContent = hours > 0
+            ? `${format(hours)}:${format(minutes)}:${format(seconds)}`
+            : `${format(minutes)}:${format(seconds)}`;
+    }, 1000);
+}
+
 async function initializeWebRTC(data) {
     const configuration = {
         iceServers: data.iceServers.iceServers,
@@ -1014,10 +1038,14 @@ async function initializeWebRTC(data) {
 
     // Add local stream IMMEDIATELY for fastest negotiation
     if (localStream) {
-        localStream.getTracks().forEach(track => {
+        const tracks = localStream.getTracks();
+        console.log('[CLIENT] Attaching local tracks:', tracks.map(t => `${t.kind}:${t.enabled}`));
+        tracks.forEach(track => {
             peerConnection.addTrack(track, localStream);
         });
         console.log('[CLIENT] Local tracks added to peer connection');
+    } else {
+        console.warn('[CLIENT] No localStream present when initializing WebRTC – audio/video may not flow');
     }
 
     // ── Handle incoming tracks: video + audio playback (audio element for reliable remote audio) ──
@@ -1440,6 +1468,13 @@ function fullyCleanupSession() {
     if (brightnessInterval) {
         clearInterval(brightnessInterval);
         brightnessInterval = null;
+    }
+
+    if (sessionTimerInterval) {
+        clearInterval(sessionTimerInterval);
+        sessionTimerInterval = null;
+        const timerEl = document.getElementById('sessionTimer');
+        if (timerEl) timerEl.textContent = '00:00';
     }
 
     // Hide media container if not in video/audio match anyway

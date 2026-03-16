@@ -557,7 +557,10 @@
             <div id="sessionTopBar" class="session-top-bar hidden">
                 <div class="session-top-bar-left">
                     <img src="logo-mark.png" alt="Logo" class="header-logo session-top-bar-logo logo-img-blend">
-                    <span id="sessionTopBarPeerName" class="session-top-bar-peer">Stranger</span>
+                    <div style="display: flex; flex-direction: column; gap: 2px;">
+                        <span id="sessionTopBarPeerName" class="session-top-bar-peer">Stranger</span>
+                        <span id="sessionTimer" class="status-indicator" style="font-size: 12px;">00:00</span>
+                    </div>
                 </div>
                 <div class="session-top-bar-actions">
                     <button class="tool-btn-header skip-glow" onclick="skipUser()">
