@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AnonKonnect – Simple Anonymous Connections</title>
+    <meta name="description"
+        content="A gentle, modern landing page for AnonKonnect – choose text, audio, or video and jump directly into an anonymous conversation.">
+    <link rel="stylesheet" href="landing.css">
+    <!-- Shared font + icon set with main app -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/regular/style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/fill/style.css">
+</head>
+
+<body>
+    <div class="bg-orbit" aria-hidden="true"></div>
+
+    <div class="page-shell">
+        <header class="nav-glass">
+            <div class="nav-inner">
+                <a href="#top" class="brand-lockup">
+                    <div class="brand-mark">
+                        <img src="logo-mark.png" alt="AnonKonnect logo" class="brand-logo-img">
+                    </div>
+                    <div class="brand-text-block">
+                        <span class="brand-title">AnonKonnect</span>
+                        <span class="brand-caption">Anonymous chat, without the noise</span>
+                    </div>
+                </a>
+
+                <nav class="nav-links" aria-label="Primary navigation">
+                    <a href="#hero" class="is-active">Overview</a>
+                    <a href="#modes">Ways to connect</a>
+                    <a href="#why">Why AnonKonnect</a>
+                    <a href="#how">How it works</a>
+                    <a href="#trust">Trust &amp; safety</a>
+                </nav>
+
+                <div class="nav-cta">
+                    <span class="badge-pill">No signup · No profile</span>
+                    <button class="btn-primary" type="button"
+                        onclick="window.location.href='index.html?mode=video#join-form'">
+                        Start now
+                        <span aria-hidden="true">↗</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main id="top">
+            <!-- HERO -->
+            <section id="hero" class="hero">
+                <div class="hero-copy">
+                    <div class="eyebrow">
+                        <span class="eyebrow-dot"></span>
+                        <span>Live, anonymous conversation in under 10 seconds</span>
+                    </div>
+                    <h1 class="hero-title">
+                        Meet someone new in
+                        <span class="accent">a few seconds</span>
+                    </h1>
+                    <p class="hero-subtitle">
+                        Drop into an anonymous text, audio, or video chat with real people around the world – no accounts or profiles required.
+                    </p>
+
+                    <div class="hero-metrics">
+                        <div class="metric-pill">
+                            <span style="width: 8px; height: 8px; border-radius: 999px; background: radial-gradient(circle at 30% 30%, #22c1c3, #6366f1);"></span>
+                            <span>Roughly <strong>1,000+</strong> people chatting right now</span>
+                        </div>
+                        <div class="metric-pill">
+                            <span>Average connect time</span>
+                            <strong>&lt; 2 seconds</strong>
+                        </div>
+                    </div>
+
+                    <div class="hero-cta-row">
+                        <button class="btn-primary" type="button"
+                            onclick="window.location.href='index.html?mode=video#join-form'">
+                            Start a video chat
+                        </button>
+                        <button class="btn-ghost" type="button"
+                            onclick="window.location.href='index.html?mode=text#join-form'">
+                            Prefer low‑key text instead
+                        </button>
+                    </div>
+
+                    <p class="hero-footnote">
+                        Tap a mode, share a few details, and
+                        <span>we handle the rest.</span>
+                    </p>
+                </div>
+
+                <div class="hero-visual" aria-hidden="true">
+                    <div class="hero-panel">
+                        <div class="hero-panel-header">
+                            <span class="session-pill">Session preview</span>
+                            <span class="session-stat">Latency &lt; 40ms · P2P</span>
+                        </div>
+
+                        <div class="avatar-row">
+                            <div class="avatar-circle"></div>
+                            <div class="avatar-meta">
+                                <strong>Stranger · Video</strong>
+                                <span>Matched using your preferences</span>
+                            </div>
+                        </div>
+
+                        <div class="tag-chip-row">
+                            <span class="tag-chip">No signup</span>
+                            <span class="tag-chip">Private by default</span>
+                            <span class="tag-chip">Skip anytime</span>
+                        </div>
+
+                        <div class="chat-preview">
+                            <div class="bubble peer">Hey! Just looking to chat for a bit tonight.</div>
+                            <div class="bubble self">Same here. Where are you chatting from?</div>
+                            <div class="bubble-typing">
+                                <span class="dot"></span>
+                                <span class="dot"></span>
+                                <span class="dot"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="hero-floating-card">
+                        <strong>Pick a mode.</strong>
+                        <span>Text, audio, or video – jump into a fresh, anonymous room in a couple of seconds.</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2x2 MODES GRID -->
+            <section id="modes" class="section-shell reveal">
+                <div class="section-head">
+                    <div>
+                        <p class="section-kicker">Communication options</p>
+                        <h2 class="section-title">Choose how you want to talk today</h2>
+                    </div>
+                    <div class="pill-row">
+                        <span>Anonymous by design</span>
+                        <span>Skip in one click</span>
+                        <span>No long‑term history</span>
+                    </div>
+                </div>
+
+                <div class="mode-grid">
+                    <article class="mode-card">
+                        <header class="mode-card-header">
+                            <h3 class="mode-label">Text rooms</h3>
+                            <span class="mode-badge">Low‑pressure</span>
+                        </header>
+                        <p class="mode-description">
+                            Type freely with a stranger at your own pace, perfect for low‑key conversations.
+                        </p>
+                        <div class="mode-meta-row">
+                            <span>Ideal when you’re not camera‑ready.</span>
+                            <button class="mode-cta-link" type="button"
+                                onclick="window.location.href='index.html?mode=text#join-form'">
+                                Start text chat
+                                <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                                    <path fill="currentColor"
+                                        d="M5 15.25 14.25 6H8.5a.75.75 0 1 1 0-1.5h7a.75.75 0 0 1 .75.75v7a.75.75 0 0 1-1.5 0V6.5L5.75 15.75A.75.75 0 0 1 4.69 14.69Z">
+                                    </path>
+                                </svg>
+                            </button>
+                        </div>
+                    </article>
+
+                    <article class="mode-card">
+                        <header class="mode-card-header">
+                            <h3 class="mode-label">Audio calls</h3>
+                            <span class="mode-badge">Hands‑free</span>
+                        </header>
+                        <p class="mode-description">
+                            Talk hands‑free with your mic on and camera off when you just want a voice.
+                        </p>
+                        <div class="mode-meta-row">
+                            <span>Great for walks, chores, or study breaks.</span>
+                            <button class="mode-cta-link" type="button"
+                                onclick="window.location.href='index.html?mode=audio#join-form'">
+                                Start audio chat
+                                <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                                    <path fill="currentColor"
+                                        d="M5 15.25 14.25 6H8.5a.75.75 0 1 1 0-1.5h7a.75.75 0 0 1 .75.75v7a.75.75 0 0 1-1.5 0V6.5L5.75 15.75A.75.75 0 0 1 4.69 14.69Z">
+                                    </path>
+                                </svg>
+                            </button>
+                        </div>
+                    </article>
+
+                    <article class="mode-card">
+                        <header class="mode-card-header">
+                            <h3 class="mode-label">Video conversations</h3>
+                            <span class="mode-badge">Face‑to‑face</span>
+                        </header>
+                        <p class="mode-description">
+                            Turn your camera on for closer, face‑to‑face chats without sharing your real identity.
+                        </p>
+                        <div class="mode-meta-row">
+                            <span>HD peer‑to‑peer video built on WebRTC.</span>
+                            <button class="mode-cta-link" type="button"
+                                onclick="window.location.href='index.html?mode=video#join-form'">
+                                Start video chat
+                                <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                                    <path fill="currentColor"
+                                        d="M5 15.25 14.25 6H8.5a.75.75 0 1 1 0-1.5h7a.75.75 0 0 1 .75.75v7a.75.75 0 0 1-1.5 0V6.5L5.75 15.75A.75.75 0 0 1 4.69 14.69Z">
+                                    </path>
+                                </svg>
+                            </button>
+                        </div>
+                    </article>
+
+                    <article class="mode-card">
+                        <header class="mode-card-header">
+                            <h3 class="mode-label">Private rooms</h3>
+                            <span class="mode-badge">Invite‑only</span>
+                        </header>
+                        <p class="mode-description">
+                            Share a short code with friends, then meet in a small invite‑only room.
+                        </p>
+                        <div class="mode-meta-row">
+                            <span>Use your code inside the main app.</span>
+                            <button class="mode-cta-link" type="button"
+                                onclick="window.location.href='index.html#join-form'">
+                                Open private room options
+                                <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                                    <path fill="currentColor"
+                                        d="M5 15.25 14.25 6H8.5a.75.75 0 1 1 0-1.5h7a.75.75 0 0 1 .75.75v7a.75.75 0 0 1-1.5 0V6.5L5.75 15.75A.75.75 0 0 1 4.69 14.69Z">
+                                    </path>
+                                </svg>
+                            </button>
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+            <!-- WHY CHOOSE US -->
+            <section id="why" class="section-shell reveal">
+                <div class="section-head">
+                    <div>
+                        <p class="section-kicker">Why people pick AnonKonnect</p>
+                        <h2 class="section-title">Built for quick, honest conversations</h2>
+                    </div>
+                </div>
+
+                <div class="panel-grid">
+                    <article class="panel">
+                        <h3 class="panel-heading">A calmer take on classic stranger chat</h3>
+                        <div class="panel-body">
+                            <p>
+                                Old‑school anonymous chat sites can feel noisy and overloaded with spam. AnonKonnect keeps the part that matters – talking to someone new – and quietly removes the rest.
+                            </p>
+                            <ul class="checklist">
+                                <li>
+                                    <span class="checklist-icon">✓</span>
+                                    <span><strong>No accounts or profiles:</strong> pick a nickname and you’re in.</span>
+                                </li>
+                                <li>
+                                    <span class="checklist-icon">✓</span>
+                                    <span><strong>One‑click skip:</strong> leave a conversation instantly with no awkwardness.</span>
+                                </li>
+                                <li>
+                                    <span class="checklist-icon">✓</span>
+                                    <span><strong>Clean, focused interface:</strong> a light, modern layout that stays out of the way.</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </article>
+
+                    <aside class="panel" aria-label="Fast and lightweight">
+                        <div class="stat-block" style="background: radial-gradient(circle at 0 0, rgba(56,189,248,0.24), transparent 60%);">
+                            <small>Average time from click to match</small>
+                            <strong>&lt; 3 seconds</strong>
+                            <small>Backed by WebSocket signaling and WebRTC peer‑to‑peer media.</small>
+                        </div>
+                    </aside>
+                </div>
+            </section>
+
+            <!-- HOW IT WORKS -->
+            <section id="how" class="section-shell reveal">
+                <div class="section-head">
+                    <div>
+                        <p class="section-kicker">How it works</p>
+                        <h2 class="section-title">Three simple steps to your next chat</h2>
+                    </div>
+                </div>
+
+                <div class="panel-grid">
+                    <article class="panel">
+                        <ol class="checklist" style="counter-reset: howSteps;">
+                            <li>
+                                <span class="checklist-icon">1</span>
+                                <span><strong>Pick a mode from this page.</strong> Choose text, audio, video, or private rooms – each CTA sends you straight into the main app with the right option pre‑selected.</span>
+                            </li>
+                            <li>
+                                <span class="checklist-icon">2</span>
+                                <span><strong>Fill in a quick, anonymous form.</strong> Choose a nickname, select how you identify, and share why you’re here – just enough context to get a better match.</span>
+                            </li>
+                            <li>
+                                <span class="checklist-icon">3</span>
+                                <span><strong>Get connected and start talking.</strong> Our backend pairs you with someone compatible and opens the chat or call screen in just a second or two.</span>
+                            </li>
+                        </ol>
+                    </article>
+
+                    <article class="panel">
+                        <h3 class="panel-heading">Designed for quick drop‑in chats</h3>
+                        <div class="panel-body">
+                            <p>
+                                AnonKonnect works for quick check‑ins between tasks or longer conversations when you feel like staying. You’re always one click away from leaving or meeting someone new.
+                            </p>
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+            <!-- TRUST & SAFETY / COMMUNITY -->
+            <section id="trust" class="section-shell reveal">
+                <div class="section-head">
+                    <div>
+                        <p class="section-kicker">Trust &amp; community</p>
+                        <h2 class="section-title">Anonymous doesn’t have to mean chaotic</h2>
+                    </div>
+                </div>
+
+                <div class="panel-grid">
+                    <article class="panel">
+                        <h3 class="panel-heading">Privacy‑first at every layer</h3>
+                        <div class="panel-body">
+                            <p>
+                                The main app uses peer‑to‑peer WebRTC for media, which means your audio and video travel
+                                directly between participants whenever possible. We don’t run trackers or ad pixels on
+                                the chat surface.
+                            </p>
+                            <ul class="checklist">
+                                <li>
+                                    <span class="checklist-icon">✓</span>
+                                    <span><strong>No accounts or passwords:</strong> nothing to forget, nothing to recover.</span>
+                                </li>
+                                <li>
+                                    <span class="checklist-icon">✓</span>
+                                    <span><strong>Easy reporting tools:</strong> sessions that break the rules can be flagged from inside the call UI.</span>
+                                </li>
+                                <li>
+                                    <span class="checklist-icon">✓</span>
+                                    <span><strong>Short‑lived sessions:</strong> each connection is temporary by design.</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </article>
+
+                    <article class="panel">
+                        <h3 class="panel-heading">Be kind, stay anonymous, move on</h3>
+                        <div class="panel-body">
+                            <p>
+                                AnonKonnect works best when people show up curious and respectful. You always control
+                                your camera, mic, and whether you stay. When you’re done, just close the session and
+                                head back here for a new one.
+                            </p>
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+            <!-- CTA BAND -->
+            <section class="cta-band reveal">
+                <div class="cta-inner">
+                    <div class="cta-text">
+                        <h2>Ready to see who’s out there?</h2>
+                        <p>Pick how you want to connect, and we’ll drop you into the main AnonKonnect app in a single click.</p>
+                    </div>
+                    <div class="cta-actions">
+                        <button class="btn-cta-primary" type="button"
+                            onclick="window.location.href='index.html?mode=video#join-form'">
+                            Jump into video
+                        </button>
+                        <button class="btn-cta-secondary" type="button"
+                            onclick="window.location.href='index.html?mode=text#join-form'">
+                            Keep it to text for now
+                        </button>
+                        <button class="btn-cta-secondary" type="button"
+                            onclick="window.location.href='index.html#join-form'">
+                            Explore private rooms
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="landing-footer">
+            <div class="landing-footer-inner">
+                <span>&copy; 2026 AnonKonnect. A small, focused project for anonymous conversations.</span>
+                <div class="footer-links">
+                    <a href="index.html#about">About the app</a>
+                    <a href="index.html#contact">Contact</a>
+                    <a href="index.html#why-us">Why we built this</a>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // Lightweight scroll-reveal for landing-only sections.
+        (function () {
+            const revealEls = document.querySelectorAll('.reveal');
+            if (!('IntersectionObserver' in window) || revealEls.length === 0) {
+                revealEls.forEach(el => el.classList.add('is-visible'));
+                return;
+            }
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, {
+                threshold: 0.18
+            });
+
+            revealEls.forEach(el => observer.observe(el));
+        })();
+    </script>
+</body>
+
+</html>
+

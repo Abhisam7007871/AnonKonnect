@@ -67,6 +67,12 @@ if (REDIS_URL) {
 }
 
 app.use(cors());
+
+// Serve new light landing page at the root while keeping index.html for the app shell.
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/landing.html'));
+});
+
 app.use(express.static(path.join(__dirname, '../public')));
 
 // Health check endpoint (required for Render/Railway)

@@ -51,6 +51,21 @@ document.addEventListener('DOMContentLoaded', () => {
     if (startBtn) startBtn.disabled = true;
     // Connect to signaling server
     connectToServer();
+
+    // Deep-link handling: ?mode=text|audio|video → pre-select + scroll to form
+    try {
+        const params = new URLSearchParams(window.location.search || '');
+        const rawMode = (params.get('mode') || '').toLowerCase();
+        const allowedModes = ['text', 'audio', 'video'];
+        if (allowedModes.includes(rawMode) && typeof scrollToForm === 'function') {
+            // Defer slightly to ensure layout is ready before scrolling
+            setTimeout(() => {
+                scrollToForm(rawMode);
+            }, 0);
+        }
+    } catch (e) {
+        console.warn('[CLIENT] Failed to apply mode deep-link:', e);
+    }
 });
 
 // Smooth scrolling for navigation

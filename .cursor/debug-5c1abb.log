@@ -182,3 +182,11 @@
 {"sessionId":"5c1abb","location":"app.js:handleInfoSubmit","message":"submit connection check","data":{"hasSocket":true,"socketConnected":true,"timeSinceLoadMs":214380},"timestamp":1773511825984,"hypothesisId":"H2"}
 {"sessionId":"5c1abb","location":"app.js:connectToServer","message":"signaling connection attempt","data":{"signalingUrl":"https://anonkonnect.onrender.com","hostname":"anonkonnect.onrender.com","origin":"https://anonkonnect.onrender.com"},"timestamp":1773511999505,"hypothesisId":"H4"}
 {"sessionId":"5c1abb","location":"app.js:connect","message":"signaling connected","data":{},"timestamp":1773511999731,"hypothesisId":"H1"}
+{"sessionId":"5c1abb","location":"app.js:connectToServer","message":"signaling connection attempt","data":{"signalingUrl":"https://anonkonnect.onrender.com","hostname":"anonkonnect.onrender.com","origin":"https://anonkonnect.onrender.com"},"timestamp":1773512056504,"hypothesisId":"H4"}
+{"sessionId":"5c1abb","location":"app.js:connect","message":"signaling connected","data":{},"timestamp":1773512056724,"hypothesisId":"H1"}
+{"sessionId":"5c1abb","location":"app.js:connectToServer","message":"signaling connection attempt","data":{"signalingUrl":"https://anonkonnect.onrender.com","hostname":"anonkonnect.onrender.com","origin":"https://anonkonnect.onrender.com"},"timestamp":1773512163499,"hypothesisId":"H4"}
+{"sessionId":"5c1abb","location":"app.js:connect","message":"signaling connected","data":{},"timestamp":1773512163921,"hypothesisId":"H1"}
+{"sessionId":"5c1abb","location":"app.js:handleInfoSubmit","message":"submit connection check","data":{"hasSocket":true,"socketConnected":true,"timeSinceLoadMs":209342},"timestamp":1773512372296,"hypothesisId":"H2"}
+{"sessionId":"5c1abb","location":"app.js:handleInfoSubmit","message":"submit connection check","data":{"hasSocket":true,"socketConnected":true,"timeSinceLoadMs":559838},"timestamp":1773512722792,"hypothesisId":"H2"}
+{"sessionId":"5c1abb","location":"app.js:handleInfoSubmit","message":"submit connection check","data":{"hasSocket":true,"socketConnected":true,"timeSinceLoadMs":688892},"timestamp":1773512851846,"hypothesisId":"H2"}
+{"sessionId":"5c1abb","location":"app.js:handleInfoSubmit","message":"submit connection check","data":{"hasSocket":true,"socketConnected":true,"timeSinceLoadMs":843010},"timestamp":1773513005964,"hypothesisId":"H2"}

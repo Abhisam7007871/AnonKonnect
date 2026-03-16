@@ -10,7 +10,9 @@
 
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/feather-icons"></script>
+    <!-- Icon font used throughout (ph / ph-fill classes) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/regular/style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/fill/style.css">
 
     <!-- Vercel Web Analytics: load ONLY on Vercel; never on Render (avoids 404 + MIME error) -->
     <script>
@@ -35,7 +37,7 @@
     <nav class="navbar" id="navbar">
         <div class="nav-container">
             <div class="logo">
-                <img src="logo.png" alt="AnonKonnect Logo" class="brand-logo-main logo-img-blend">
+                <img src="logo-mark.png" alt="AnonKonnect Logo" class="brand-logo-main logo-img-blend">
                 <span>AnonKonnect</span>
             </div>
             <div class="nav-links">
@@ -383,21 +385,47 @@
                 </div>
 
                 <div class="preview-mockup video-mockup glass-panel">
-                    <div class="mockup-header">Video Chat</div>
-                    <div class="mockup-grid">
-                        <div class="mock-cam peer-cam">
-                            <i class="ph-fill ph-user focus"></i>
-                            <span class="label">Stranger</span>
+                    <div class="video-mock">
+                        <div class="video-mock-top">
+                            <div class="video-mock-status">
+                                <span class="status-dot"></span>
+                                <span class="status-text">Live video with Stranger</span>
+                            </div>
+                            <div class="video-mock-meta">
+                                <span class="video-timer">03:24</span>
+                                <span class="video-connection"><i class="ph-fill ph-wifi-high"></i> Good</span>
+                            </div>
                         </div>
-                        <div class="mock-cam self-cam">
-                            <i class="ph-fill ph-user"></i>
-                            <span class="label">You</span>
+                        <div class="video-mock-body">
+                            <div class="video-tile remote">
+                                <div class="video-avatar-ring">
+                                    <div class="video-avatar">
+                                        <i class="ph-fill ph-user"></i>
+                                    </div>
+                                </div>
+                                <div class="video-name-pill">Stranger</div>
+                            </div>
+                            <div class="video-tile local">
+                                <div class="video-avatar-mini">
+                                    <i class="ph-fill ph-user"></i>
+                                </div>
+                                <div class="video-name-badge">You</div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="mockup-controls">
-                        <div class="ctrl red">SKIP</div>
-                        <div class="ctrl"><i class="ph-fill ph-microphone"></i></div>
-                        <div class="ctrl"><i class="ph-fill ph-video-camera"></i></div>
+                        <div class="video-mock-controls">
+                            <button class="ctrl-btn">
+                                <i class="ph-fill ph-microphone"></i>
+                            </button>
+                            <button class="ctrl-btn">
+                                <i class="ph-fill ph-video-camera"></i>
+                            </button>
+                            <button class="ctrl-btn">
+                                <i class="ph-fill ph-monitor"></i>
+                            </button>
+                            <button class="ctrl-btn end-call">
+                                <i class="ph-fill ph-phone-disconnect"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -466,7 +494,7 @@
             <div class="footer-container">
                 <div class="footer-brand">
                     <div class="logo">
-                        <img src="logo.png" alt="AnonKonnect Logo" class="brand-logo-footer logo-img-blend"> <span
+                        <img src="logo-mark.png" alt="AnonKonnect Logo" class="brand-logo-footer logo-img-blend"> <span
                             class="brand-text">AnonKonnect</span>
                     </div>
                     <p>Anonymous chat platform built for fast and secure connections.</p>
@@ -528,7 +556,7 @@
             <!-- Session top bar: Skip/Leave/Chat always visible in video/audio mode (not hidden when chat collapsed) -->
             <div id="sessionTopBar" class="session-top-bar hidden">
                 <div class="session-top-bar-left">
-                    <img src="logo.png" alt="Logo" class="header-logo session-top-bar-logo logo-img-blend">
+                    <img src="logo-mark.png" alt="Logo" class="header-logo session-top-bar-logo logo-img-blend">
                     <span id="sessionTopBarPeerName" class="session-top-bar-peer">Stranger</span>
                 </div>
                 <div class="session-top-bar-actions">
@@ -577,7 +605,7 @@
             <div id="chatContainer" class="chat-wrapper glass-panel">
                 <div class="chat-header">
                     <div class="peer-status-block">
-                        <img src="logo.png" alt="AnonKonnect Logo" class="header-logo logo-img-blend">
+                        <img src="logo-mark.png" alt="AnonKonnect Logo" class="header-logo logo-img-blend">
                         <div>
                             <h3 id="peerName"><span class="brand-text" style="font-size: 18px;">AnonKonnect</span></h3>
                             <span class="status-indicator">Online</span>
