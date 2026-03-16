@@ -68,9 +68,10 @@ if (REDIS_URL) {
 
 app.use(cors());
 
-// Serve new light landing page at the root while keeping index.html for the app shell.
+// Serve main app shell at the root. The older marketing-heavy landing page
+// has been retired so there is a single entry experience.
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/landing.html'));
+    res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
 app.use(express.static(path.join(__dirname, '../public')));
