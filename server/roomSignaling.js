@@ -1,54 +1,108 @@
-/**
- * Signaling for private rooms: offer, answer, ICE, chat, typing.
- * Verifies room membership before forwarding.
- */
+const { getRoom, isRoomParticipant } = require("./rooms");
+const { getPrisma } = require("./prisma");
 
-const { getRoom, isInRoom } = require('./rooms');
+const MAX_ROOM_MESSAGES = 100;
+
+function toMessageKind(kind) {
+  return {
+    text: "TEXT",
+    gif: "GIF",
+    image: "IMAGE",
+    sticker: "TEXT",
+    voice: "VOICE",
+    system: "SYSTEM",
+  }[String(kind || "text").toLowerCase()] || "TEXT";
+}
 
 function initRoomSignaling(io, socket) {
-    function verifyRoom(roomId, socketId) {
-        if (!roomId) return false;
-        return isInRoom(roomId, socketId);
+  function verifyRoom(roomId) {
+    return roomId && isRoomParticipant(roomId, socket.id);
+  }
+
+  socket.on("room_message", (data = {}) => {
+    if (!verifyRoom(data.roomId) || !data.message) {
+      return;
     }
 
-    socket.on('room-offer', (data) => {
-        const { to, offer, roomId } = data || {};
-        if (verifyRoom(roomId, socket.id)) {
-            io.to(to).emit('room-offer', { from: socket.id, offer, roomId });
-        }
-    });
+    const room = getRoom(data.roomId);
 
-    socket.on('room-answer', (data) => {
-        const { to, answer, roomId } = data || {};
-        if (verifyRoom(roomId, socket.id)) {
-            io.to(to).emit('room-answer', { from: socket.id, answer, roomId });
-        }
-    });
+    if (!room) {
+      return;
+    }
 
-    socket.on('room-ice-candidate', (data) => {
-        const { to, candidate, roomId } = data || {};
-        if (verifyRoom(roomId, socket.id)) {
-            io.to(to).emit('room-ice-candidate', { from: socket.id, candidate, roomId });
-        }
-    });
+    room.messages.push(data.message);
+    if (room.messages.length > MAX_ROOM_MESSAGES) {
+      room.messages.shift();
+    }
 
-    socket.on('room-chat-message', (data) => {
-        const { message, roomId } = data || {};
-        if (verifyRoom(roomId, socket.id)) {
-            socket.to(roomId).emit('room-chat-message', {
-                from: socket.id,
-                message,
-                timestamp: Date.now()
-            });
-        }
-    });
+    const prisma = getPrisma();
+    if (prisma) {
+      prisma.roomMessage
+        .create({
+          data: {
+            id: data.message.id,
+            roomId: data.roomId,
+            senderId: socket.user?.accessLevel === "registered" ? socket.user.id : null,
+            senderName: data.message.senderName || socket.user?.nickname || "Anon",
+            kind: toMessageKind(data.message.kind),
+            content: String(data.message.content || ""),
+            metadata: {
+              timestamp: data.message.timestamp || Date.now(),
+            },
+          },
+        })
+        .catch((error) => {
+          console.warn("[ROOM SIGNALING] Failed to persist room message:", error.message);
+        });
+    }
 
-    socket.on('room-typing', (data) => {
-        const { isTyping, roomId } = data || {};
-        if (verifyRoom(roomId, socket.id)) {
-            socket.to(roomId).emit('room-typing', { from: socket.id, isTyping });
-        }
+    socket.to(data.roomId).emit("room_message", {
+      roomId: data.roomId,
+      from: socket.id,
+      message: data.message,
     });
+  });
+
+  socket.on("room_typing", (data = {}) => {
+    if (!verifyRoom(data.roomId)) {
+      return;
+    }
+
+    socket.to(data.roomId).emit("room_typing", {
+      roomId: data.roomId,
+      from: socket.id,
+      isTyping: data.isTyping,
+    });
+  });
+
+  socket.on("room_read", (data = {}) => {
+    if (!verifyRoom(data.roomId) || !data.messageId) {
+      return;
+    }
+
+    const prisma = getPrisma();
+    if (prisma && socket.user?.accessLevel === "registered" && socket.user?.id) {
+      prisma.roomMember
+        .update({
+          where: {
+            roomId_userId: {
+              roomId: data.roomId,
+              userId: socket.user.id,
+            },
+          },
+          data: {
+            lastSeenAt: new Date(),
+          },
+        })
+        .catch(() => {});
+    }
+
+    socket.to(data.roomId).emit("room_message_read", {
+      roomId: data.roomId,
+      messageId: data.messageId,
+      readAt: Date.now(),
+    });
+  });
 }
 
 module.exports = { initRoomSignaling };

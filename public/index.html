@@ -14,6 +14,18 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/regular/style.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/fill/style.css">
 
+    <!-- Auth0 SPA SDK (required login) -->
+    <script src="https://cdn.auth0.com/js/auth0-spa-js/2.2/auth0-spa-js.production.js"></script>
+    <script>
+        // Fill these from your Auth0 dashboard (Application: Single Page App)
+        window.AUTH0_CONFIG = {
+            domain: "",
+            clientId: "",
+            audience: "",
+            redirectUri: window.location.origin
+        };
+    </script>
+
     <!-- Vercel Web Analytics: load ONLY on Vercel; never on Render (avoids 404 + MIME error) -->
     <script>
         (function () {
@@ -49,9 +61,16 @@
                 <a href="#contact">Contact</a>
             </div>
             <div class="nav-actions">
+                <div class="adsense-slot adsense-slot-header">AdSense Header 728x90</div>
                 <div id="connectionStatus" class="connection-status">
                     <span class="dot"></span> <span class="status-text">Connecting...</span>
                 </div>
+                <button id="loginBtn" class="btn btn-outline" style="margin-left: 10px; padding: 10px 14px;" onclick="login()">
+                    <i class="ph ph-sign-in"></i> Login
+                </button>
+                <button id="logoutBtn" class="btn btn-outline hidden" style="margin-left: 10px; padding: 10px 14px;" onclick="logout()">
+                    <i class="ph ph-sign-out"></i> Logout
+                </button>
             </div>
             <button class="mobile-menu-btn" onclick="toggleMobileMenu()">
                 <i class="ph ph-list"></i>
@@ -75,7 +94,7 @@
                     <div class="hero-badge">🔒 100% Secure & Anonymous</div>
                     <h1 class="hero-title">Meet Someone New with <span class="brand-text">AnonKonnect</span></h1>
                     <p class="hero-subtitle">Connect with people around the world through text, voice, or video while
-                        staying completely anonymous. No registration required.</p>
+                        staying completely anonymous.</p>
 
                     <div class="hero-buttons">
                         <button class="btn btn-primary" onclick="scrollToForm('video')">
@@ -186,13 +205,28 @@
                             <div class="custom-select">
                                 <select id="purpose" required>
                                     <option value="" disabled selected>Why are you here?</option>
-                                    <option value="casual">Just chatting / Bored</option>
-                                    <option value="friends">Making new friends</option>
-                                    <option value="language">Language practice</option>
-                                    <option value="dating">Dating / Flirting</option>
-                                    <option value="advice">Seeking advice / Venting</option>
+                                    <option value="chat">General chat</option>
+                                    <option value="friendship">Friendship</option>
+                                    <option value="dating">Dating</option>
                                 </select>
                                 <i class="ph ph-caret-down select-icon"></i>
+                            </div>
+                        </div>
+
+                        <div class="input-grid location-grid">
+                            <div class="form-group">
+                                <label for="country"><i class="ph ph-globe"></i> Country</label>
+                                <input type="text" id="country" placeholder="e.g., India" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="state"><i class="ph ph-map-pin-line"></i> State</label>
+                                <input type="text" id="state" placeholder="e.g., Maharashtra" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="city"><i class="ph ph-buildings"></i> City</label>
+                                <input type="text" id="city" placeholder="e.g., Pune" required>
                             </div>
                         </div>
 
@@ -219,6 +253,10 @@
                             Find a Partner <i class="ph ph-arrow-right"></i>
                         </button>
 
+                        <div class="matchmaking-note glass-panel">
+                            <strong>Smart matching:</strong> We start in your country, expand to nearby countries after 60 seconds, then fall back globally if needed.
+                        </div>
+
                         <div class="private-room-section" style="margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--glass-border);">
                             <label style="margin-bottom: 12px; display: block;">Private room (share a code, max 4 people):</label>
                             <div class="private-room-actions" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
@@ -243,7 +281,145 @@
                             </div>
                             <p id="privateRoomError" class="hidden" style="margin-top: 8px; color: #ef4444; font-size: 14px;"></p>
                         </div>
+
+                        <div class="guest-disclosure">
+                            Guests can browse public rooms, but room names and live messages stay blurred until login.
+                        </div>
                     </form>
+                </div>
+            </div>
+        </section>
+
+        <section id="platformHub" class="platform-hub-section">
+            <div class="platform-hub-container">
+                <div class="platform-hub-header">
+                    <div>
+                        <p class="platform-kicker">Premium Real-time Platform</p>
+                        <h2>Match, join live rooms, or chat with AI personas</h2>
+                        <p>AnonKonnect now blends 1-on-1 matching, community rooms, and AI companions inside one dark premium interface.</p>
+                    </div>
+                    <div class="adsense-slot adsense-slot-sidebar">AdSense Sidebar 300x250</div>
+                </div>
+
+                <div class="platform-tabs glass-panel">
+                    <button class="platform-tab active" data-tab="match" onclick="switchHubTab('match')">
+                        <i class="ph ph-lightning"></i> Match
+                    </button>
+                    <button class="platform-tab" data-tab="rooms" onclick="switchHubTab('rooms')">
+                        <i class="ph ph-users-three"></i> Rooms
+                    </button>
+                    <button class="platform-tab" data-tab="ai" onclick="switchHubTab('ai')">
+                        <i class="ph ph-robot"></i> AI Personas
+                    </button>
+                </div>
+
+                <div id="hubPanelMatch" class="hub-panel glass-panel">
+                    <div class="match-ladder">
+                        <div class="match-ladder-item">
+                            <span class="match-ladder-step">1</span>
+                            <div>
+                                <h3>Country-first matching</h3>
+                                <p>Users are first matched inside the same country for relevance and lower latency.</p>
+                            </div>
+                        </div>
+                        <div class="match-ladder-item">
+                            <span class="match-ladder-step">2</span>
+                            <div>
+                                <h3>Nearby-country expansion</h3>
+                                <p>After 60 seconds, matching expands to nearby countries in the same region.</p>
+                            </div>
+                        </div>
+                        <div class="match-ladder-item">
+                            <span class="match-ladder-step">3</span>
+                            <div>
+                                <h3>Global fallback</h3>
+                                <p>If the queue is still quiet, the search opens globally so nobody waits forever.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="adsense-slot adsense-slot-inline">AdSense Inline 728x90</div>
+                </div>
+
+                <div id="hubPanelRooms" class="hub-panel glass-panel hidden">
+                    <div class="rooms-shell">
+                        <div class="rooms-directory">
+                            <div class="panel-title-row">
+                                <div>
+                                    <h3>Public Rooms</h3>
+                                    <p>Region and interest lounges that update in real time.</p>
+                                </div>
+                                <button class="btn btn-outline" type="button" onclick="refreshRoomDirectory()">
+                                    <i class="ph ph-arrows-clockwise"></i> Refresh
+                                </button>
+                            </div>
+
+                            <div id="roomsDirectory" class="room-grid"></div>
+                            <div class="adsense-slot adsense-slot-inline">AdSense Between Room Lists</div>
+
+                            <div class="hidden-room-tools">
+                                <div class="hidden-room-form">
+                                    <h4>Create hidden private room</h4>
+                                    <input type="text" id="hiddenRoomName" placeholder="Room name">
+                                    <input type="text" id="hiddenRoomSlug" placeholder="Private slug">
+                                    <button class="btn btn-primary" type="button" onclick="createHiddenRoom()">
+                                        <i class="ph ph-lock-key"></i> Create
+                                    </button>
+                                </div>
+                                <div class="hidden-room-form">
+                                    <h4>Request private access</h4>
+                                    <input type="text" id="privateAccessSlug" placeholder="Enter private slug">
+                                    <button class="btn btn-secondary" type="button" onclick="requestPrivateRoomAccess()">
+                                        <i class="ph ph-paper-plane-tilt"></i> Request Access
+                                    </button>
+                                </div>
+                            </div>
+                            <p id="roomDirectoryStatus" class="room-status-line">Load a room to start chatting with the group.</p>
+                        </div>
+
+                        <div class="room-chat-panel">
+                            <div class="panel-title-row">
+                                <div>
+                                    <h3 id="activeRoomTitle">No room selected</h3>
+                                    <p id="activeRoomMeta">Join a public room or request access to a hidden one.</p>
+                                </div>
+                            </div>
+
+                            <div id="roomGuestOverlay" class="guest-overlay hidden">
+                                <div class="guest-overlay-card glass-panel">
+                                    <h4>Register/Login to see messages and join private rooms.</h4>
+                                    <p>Guests can enter public rooms, but names and messages remain blurred until you sign in.</p>
+                                </div>
+                            </div>
+
+                            <div id="roomMessages" class="room-messages"></div>
+                            <div id="roomTypingIndicator" class="typing-indicator"></div>
+                            <div class="room-composer">
+                                <input type="text" id="roomMessageInput" placeholder="Message the room..." onkeypress="handleRoomMessageKeyPress(event)">
+                                <button class="btn btn-primary" type="button" onclick="sendRoomMessage()">
+                                    <i class="ph ph-paper-plane-right"></i> Send
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="hubPanelAi" class="hub-panel glass-panel hidden">
+                    <div class="ai-shell">
+                        <div class="ai-persona-list">
+                            <button class="ai-persona active" data-persona="general" onclick="selectAiPersona('general')">General Assistant</button>
+                            <button class="ai-persona" data-persona="joke" onclick="selectAiPersona('joke')">Joke Bot</button>
+                            <button class="ai-persona" data-persona="roleplay" onclick="selectAiPersona('roleplay')">Roleplay AI</button>
+                        </div>
+                        <div class="ai-chat-panel">
+                            <div id="aiMessages" class="room-messages ai-messages"></div>
+                            <div class="room-composer">
+                                <input type="text" id="aiMessageInput" placeholder="Talk to the selected AI..." onkeypress="handleAiKeyPress(event)">
+                                <button class="btn btn-secondary" type="button" onclick="sendAiMessage()">
+                                    <i class="ph ph-sparkle"></i> Send
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -543,6 +719,13 @@
             </div>
             <h2 id="waitingText">Looking for a stranger...</h2>
             <p id="queueInfo">Connecting you to the global network.</p>
+            <div class="search-status-panel glass-panel">
+                <p id="waitingMessage">Searching for matches in your country...</p>
+                <div class="search-status-meta">
+                    <span id="searchScope">same country</span>
+                    <span id="searchTimer">60s</span>
+                </div>
+            </div>
             <button class="btn btn-outline cancel-btn" onclick="cancelWaiting()">
                 <i class="ph ph-x"></i> Cancel Search
             </button>
@@ -635,6 +818,13 @@
 
                 <div class="typing-indicator" id="typingIndicator">Stranger is typing...</div>
 
+                <div id="directGuestOverlay" class="guest-overlay hidden">
+                    <div class="guest-overlay-card glass-panel">
+                        <h4>Register/Login to see messages and join private rooms.</h4>
+                        <p>Guest mode keeps public chat readable only as blurred previews.</p>
+                    </div>
+                </div>
+
                 <!-- Pickers Overlay Area -->
                 <div id="emojiPickerContainer" class="picker-container hidden">
                     <emoji-picker></emoji-picker>
@@ -664,6 +854,10 @@
                             <button id="emojiBtn" class="toolbar-btn toolbar-btn-with-label" onclick="toggleEmojiPicker()" title="Click to open emoji picker"><i class="ph-bold ph-smiley"></i><span class="toolbar-btn-label">Emoji</span></button>
                             <button id="gifBtn" class="toolbar-btn toolbar-btn-with-label" onclick="toggleGifPicker()" title="GIFs"><i class="ph-bold ph-gif"></i><span class="toolbar-btn-label">GIF</span></button>
                             <button id="stickerBtn" class="toolbar-btn toolbar-btn-with-label" onclick="toggleStickerPicker()" title="Stickers"><i class="ph-bold ph-sticker"></i><span class="toolbar-btn-label">Stickers</span></button>
+                            <label for="imageInput" class="toolbar-btn toolbar-btn-with-label" title="Image">
+                                <i class="ph-bold ph-image"></i><span class="toolbar-btn-label">Image</span>
+                            </label>
+                            <input type="file" id="imageInput" accept="image/*" class="hidden" onchange="sendImageMessage(event)">
                             <span id="recordingIndicator" class="hidden text-brand"><i class="ph-fill ph-record"></i> Recording...</span>
                         </div>
                         <div class="input-box">
