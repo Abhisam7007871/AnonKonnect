@@ -1,17 +1,21 @@
-# Production Dockerfile for AnonKonnect Signaling Server
+# Production Dockerfile for AnonKonnect
+#
+# Render/hosts sometimes run only `npm start`, so we ensure `.next` is generated
+# during the Docker image build (via `npm run build`) before starting the server.
 FROM node:20-slim
 
 WORKDIR /app
 
 # Install dependencies first for better caching
 COPY package*.json ./
-RUN npm install --production
+RUN npm install
 
-# Copy server and public assets
-COPY server/ ./server/
-COPY public/ ./public/
+# Copy the whole project (Next.js build needs app/components/lib/prisma/etc.)
+COPY . .
 
-# Environment variables
+# Generate Prisma client (if needed) and build Next.js to produce `.next`
+RUN npm run build
+
 ENV NODE_ENV=production
 ENV PORT=3000
 

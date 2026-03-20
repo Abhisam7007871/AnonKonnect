@@ -30,6 +30,7 @@ import { ChatBubble } from "@/components/chat-bubble";
 import { aiPersonas, buildPersonaIntro, getPersonaConfig } from "@/lib/demo-ai";
 import { getSocket, resetSocket } from "@/lib/socket-client";
 import { cn, formatRelativeClock, toTitleCase } from "@/lib/utils";
+import { signIn, signOut, useSession } from "next-auth/react";
 
 const tabs = [
   { id: "match", label: "1-on-1 Match", icon: Search },
@@ -110,10 +111,12 @@ function createMessage(payload) {
 export default function AnonKonnectApp({ initialRooms }) {
   const [activeTab, setActiveTab] = useState("match");
   const [session, setSession] = useState(guestSession);
+  const { data: nextAuthSession, status: nextAuthStatus } = useSession();
   const [authMode, setAuthMode] = useState("login");
   const [authForm, setAuthForm] = useState({ email: "", password: "" });
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
+  const [roomActionError, setRoomActionError] = useState("");
   const [isConnected, setIsConnected] = useState(false);
   const [socketId, setSocketId] = useState("");
   const [selectedMode, setSelectedMode] = useState("text");
@@ -380,6 +383,34 @@ export default function AnonKonnectApp({ initialRooms }) {
     }
   }, []);
 
+  // Bridge NextAuth OAuth into this app's custom socket/JWT flow.
+  useEffect(() => {
+    if (nextAuthStatus !== "authenticated") {
+      return;
+    }
+
+    const token = nextAuthSession?.token;
+    const user = nextAuthSession?.user;
+    if (!token || !user) {
+      return;
+    }
+
+    const nextSession = {
+      accessLevel: "registered",
+      token,
+      user,
+    };
+
+    persistSession(nextSession);
+    setSession(nextSession);
+    setOnboarding((current) => ({
+      ...current,
+      ...toOnboardingFromUser(user),
+    }));
+    setAuthError("");
+    setRoomActionError("");
+  }, [nextAuthStatus, nextAuthSession]);
+
   useEffect(() => {
     async function hydrateProfile() {
       if (!session.token || session.accessLevel !== "registered") {
@@ -491,6 +522,11 @@ export default function AnonKonnectApp({ initialRooms }) {
     socket.on("connect", () => {
       setIsConnected(true);
       socket.emit("list_rooms");
+    });
+    socket.on("connect_error", (error) => {
+      setIsConnected(false);
+      setCallError(error?.message || "Unable to connect to server.");
+      setQueueStatus(null);
     });
     socket.on("disconnect", () => setIsConnected(false));
     socket.on("connected", (payload) => setSocketId(payload.userId));
@@ -611,7 +647,9 @@ export default function AnonKonnectApp({ initialRooms }) {
       );
     });
     socket.on("room_error", (payload) => {
-      setAuthError(payload.message || "Room action failed.");
+      const message = payload.message || "Room action failed.";
+      setRoomActionError(message);
+      setAuthError(message);
     });
     socket.on("session:skip", () => {
       resetMatchMedia();
@@ -693,13 +731,37 @@ export default function AnonKonnectApp({ initialRooms }) {
     setIsAuthLoading(true);
     setAuthError("");
 
+    const nickname = String(onboarding.nickname || "").trim();
+    const password = String(authForm.password || "");
+    const email = String(authForm.email || "").trim();
+
+    // Fast client-side guardrails so we don't send empty/invalid payloads.
+    if (!email.includes("@") || email.length < 6) {
+      setIsAuthLoading(false);
+      setAuthError("Please enter a valid email.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setIsAuthLoading(false);
+      setAuthError("Password must be at least 6 characters.");
+      return;
+    }
+
+    if (authMode === "register" && nickname.length < 2) {
+      setIsAuthLoading(false);
+      setAuthError("Nickname must be at least 2 characters.");
+      return;
+    }
+
     const endpoint = authMode === "login" ? "/api/auth/login" : "/api/auth/register";
     const body =
       authMode === "login"
-        ? authForm
+        ? { ...authForm, email }
         : {
             ...authForm,
-            nickname: onboarding.nickname,
+            email,
+            nickname,
             gender: onboarding.gender,
             purpose: onboarding.purpose,
             country: onboarding.country,
@@ -735,6 +797,10 @@ export default function AnonKonnectApp({ initialRooms }) {
   }
 
   function continueAsGuest() {
+    if (nextAuthStatus === "authenticated") {
+      signOut({ redirect: false }).catch(() => {});
+    }
+
     const nextSession = {
       ...guestSession,
       user: {
@@ -752,6 +818,10 @@ export default function AnonKonnectApp({ initialRooms }) {
   }
 
   function logout() {
+    if (nextAuthStatus === "authenticated") {
+      signOut({ redirect: false }).catch(() => {});
+    }
+
     window.localStorage.removeItem("anonkonnect-session");
     resetMatchMedia();
     setSession(guestSession);
@@ -761,15 +831,56 @@ export default function AnonKonnectApp({ initialRooms }) {
   }
 
   async function joinMatchmakingQueue() {
+    setCallError("");
+
+    // Optimistic UI so the user immediately sees feedback.
+    setQueueStatus({
+      stage: "state",
+      position: 1,
+      totalInQueue: 1,
+      progressPercent: 0,
+      nextExpansionAt: Date.now() + 60_000,
+      message: "Joining queue...",
+    });
+
     let nextSession = session;
     try {
       nextSession = await syncRegisteredProfile();
     } catch (error) {
       setAuthError(error.message);
+      setQueueStatus(null);
       return;
     }
 
-    const socket = getSocket();
+    const socket = getSocket({
+      token: nextSession.token,
+      user: nextSession.user,
+      accessLevel: nextSession.accessLevel,
+    });
+
+    // Ensure we don't drop `join-queue` during reconnect.
+    if (!socket.connected) {
+      await new Promise((resolve, reject) => {
+        const timeout = window.setTimeout(() => {
+          reject(new Error("Socket connection timed out. Please try again."));
+        }, 8000);
+
+        socket.once("connect", () => {
+          window.clearTimeout(timeout);
+          resolve();
+        });
+
+        socket.connect();
+      }).catch((error) => {
+        setCallError(error.message || "Unable to connect to server.");
+        setQueueStatus(null);
+      });
+    }
+
+    if (!socket.connected) {
+      return;
+    }
+
     socket.emit("join-queue", {
       mode: selectedMode,
       profile: {
@@ -797,7 +908,7 @@ export default function AnonKonnectApp({ initialRooms }) {
   function handleComposerEnter(event, onSubmit) {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
-      onSubmit();
+      onSubmit(event);
     }
   }
 
@@ -877,8 +988,36 @@ export default function AnonKonnectApp({ initialRooms }) {
   }
 
   async function createRoom() {
+    setRoomActionError("");
+    if (!isConnected) {
+      setRoomActionError("Connecting to server... please wait, then try Create Room again.");
+      return;
+    }
+
     if (!isRegistered) {
-      setAuthError("Register or log in to create private rooms.");
+      setRoomActionError("Register or log in to create private rooms.");
+      return;
+    }
+
+    const name = String(newRoom.name || "").trim();
+    const description = String(newRoom.description || "").trim();
+    const category = String(newRoom.category || "").trim();
+    const region = String(newRoom.region || "").trim();
+
+    if (name.length < 2) {
+      setRoomActionError("Room name must be at least 2 characters.");
+      return;
+    }
+    if (description.length < 4) {
+      setRoomActionError("Room description must be at least 4 characters.");
+      return;
+    }
+    if (category.length < 2) {
+      setRoomActionError("Room category must be at least 2 characters.");
+      return;
+    }
+    if (region.length < 2) {
+      setRoomActionError("Room region must be at least 2 characters.");
       return;
     }
 
@@ -886,7 +1025,7 @@ export default function AnonKonnectApp({ initialRooms }) {
     try {
       nextSession = await syncRegisteredProfile();
     } catch (error) {
-      setAuthError(error.message);
+      setRoomActionError(error.message);
       return;
     }
 
@@ -901,7 +1040,7 @@ export default function AnonKonnectApp({ initialRooms }) {
     const payload = await response.json();
 
     if (!response.ok) {
-      setAuthError(payload.error || "Unable to create room.");
+      setRoomActionError(payload.error || "Unable to create room.");
       return;
     }
 
@@ -950,7 +1089,15 @@ export default function AnonKonnectApp({ initialRooms }) {
   }
 
   async function requestPrivateRoom() {
-    if (!privateRoomKey.trim()) {
+    setRoomActionError("");
+    if (!isConnected) {
+      setRoomActionError("Connecting to server... please wait, then try Request again.");
+      return;
+    }
+
+    const roomKey = String(privateRoomKey || "").trim();
+    if (!roomKey) {
+      setRoomActionError("Paste a private room key (room id) first.");
       return;
     }
 
@@ -959,14 +1106,14 @@ export default function AnonKonnectApp({ initialRooms }) {
       try {
         nextSession = await syncRegisteredProfile();
       } catch (error) {
-        setAuthError(error.message);
+        setRoomActionError(error.message);
         return;
       }
     }
 
     const socket = getSocket();
     socket.emit("request_join_room", {
-      roomId: privateRoomKey.trim(),
+      roomId: roomKey,
       profile: {
         ...nextSession.user,
         nickname: onboarding.nickname || nextSession.user.nickname || "Guest",
@@ -999,8 +1146,9 @@ export default function AnonKonnectApp({ initialRooms }) {
     ]);
   }
 
-  async function sendAiPrompt() {
-    if (!aiDraft.trim() || isAiLoading) {
+  async function sendAiPrompt(overrideMessage) {
+    const messageText = typeof overrideMessage === "string" ? overrideMessage : aiDraft;
+    if (!String(messageText || "").trim() || isAiLoading) {
       return;
     }
 
@@ -1008,7 +1156,7 @@ export default function AnonKonnectApp({ initialRooms }) {
       senderId: "me",
       senderName: session.user.nickname || "You",
       kind: "text",
-      content: aiDraft,
+      content: String(messageText),
     });
     const nextMessages = [...aiMessages, prompt];
     setAiMessages(nextMessages);
@@ -1022,6 +1170,7 @@ export default function AnonKonnectApp({ initialRooms }) {
         body: JSON.stringify({
           personaId: aiPersonaId,
           message: prompt.content,
+          userGender: onboarding.gender || session.user?.gender || "",
           history: nextMessages
             .filter((message) => !String(message.id || "").startsWith("ai-intro"))
             .slice(-10)
@@ -1343,6 +1492,35 @@ export default function AnonKonnectApp({ initialRooms }) {
                     Guest Mode
                   </button>
                 </div>
+                <div className="pt-1">
+                  <p className="text-xs uppercase tracking-[0.32em] text-slate-500">Or continue with</p>
+                  <div className="mt-2 grid gap-2">
+                    <button
+                      className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm text-slate-900 transition hover:bg-white/90"
+                      onClick={() => signIn("google", { callbackUrl: "/" })}
+                      type="button"
+                      disabled={nextAuthStatus === "loading"}
+                    >
+                      Google
+                    </button>
+                    <button
+                      className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm text-slate-900 transition hover:bg-white/90"
+                      onClick={() => signIn("facebook", { callbackUrl: "/" })}
+                      type="button"
+                      disabled={nextAuthStatus === "loading"}
+                    >
+                      Facebook
+                    </button>
+                    <button
+                      className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm text-slate-900 transition hover:bg-white/90"
+                      onClick={() => signIn("twitter", { callbackUrl: "/" })}
+                      type="button"
+                      disabled={nextAuthStatus === "loading"}
+                    >
+                      X (Twitter)
+                    </button>
+                  </div>
+                </div>
                 {authError && <p className="text-sm text-rose-300">{authError}</p>}
               </form>
             </motion.div>
@@ -1490,12 +1668,13 @@ export default function AnonKonnectApp({ initialRooms }) {
                 </div>
 
                 <button
-                  className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-electric to-violet px-4 py-3 font-medium text-white"
+                  className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-electric to-violet px-4 py-3 font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
                   onClick={joinMatchmakingQueue}
+                  disabled={!isConnected}
                   type="button"
                 >
                   <Radio className="h-4 w-4" />
-                  Start Matching
+                  {isConnected ? "Start Matching" : "Connecting..."}
                 </button>
 
                 <div className="mt-4 rounded-3xl border border-slate-200/80 bg-white/75 p-4">
@@ -1665,7 +1844,11 @@ export default function AnonKonnectApp({ initialRooms }) {
                         setDraft(event.target.value);
                         onTypingChat();
                       }}
-                      onKeyDown={(event) => handleComposerEnter(event, () => sendMessage("text"))}
+                      onKeyDown={(event) =>
+                        handleComposerEnter(event, (e) =>
+                          sendMessage("text", String(e.currentTarget.value || "").trim()),
+                        )
+                      }
                       placeholder="Type a message, add emoji, share a GIF, or drop a voice note."
                       value={draft}
                     />
@@ -1847,6 +2030,9 @@ export default function AnonKonnectApp({ initialRooms }) {
                         Create Room
                       </button>
                     </div>
+                    {roomActionError && (
+                      <p className="mt-3 text-sm text-rose-300">{roomActionError}</p>
+                    )}
                     <div className="mt-4 rounded-3xl border border-slate-200/80 bg-white/75 p-4">
                       <p className="text-sm font-medium text-slate-900">Request private room access</p>
                       <p className="mt-1 text-sm text-slate-500">
@@ -1915,7 +2101,11 @@ export default function AnonKonnectApp({ initialRooms }) {
                             onRoomTyping();
                           }
                         }}
-                        onKeyDown={(event) => handleComposerEnter(event, () => sendRoomMessage("text"))}
+                        onKeyDown={(event) =>
+                          handleComposerEnter(event, (e) =>
+                            sendRoomMessage("text", String(e.currentTarget.value || "").trim()),
+                          )
+                        }
                         placeholder="Message the room, add emoji, or send a sticker..."
                         value={roomDraft}
                       />
@@ -2079,7 +2269,7 @@ export default function AnonKonnectApp({ initialRooms }) {
                     <textarea
                       className="min-h-24 flex-1 rounded-3xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm"
                       onChange={(event) => setAiDraft(event.target.value)}
-                      onKeyDown={(event) => handleComposerEnter(event, sendAiPrompt)}
+                      onKeyDown={(event) => handleComposerEnter(event, (e) => sendAiPrompt(e.currentTarget.value))}
                       placeholder="Ask for advice, jokes, or a roleplay setup."
                       value={aiDraft}
                     />

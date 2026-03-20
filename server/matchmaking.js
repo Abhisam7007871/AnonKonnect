@@ -107,9 +107,10 @@ function buildCandidate(socketId, mode, profile) {
 
 function matchRank(tier) {
   return {
-    country: 0,
-    region: 1,
-    global: 2,
+    state: 0,
+    country: 1,
+    region: 2,
+    global: 3,
   }[tier];
 }
 
@@ -183,7 +184,8 @@ async function tryMatch(io, mode, localSessions, redis) {
     return;
   }
 
-  let chosen = null;
+  let bestTierRank = null;
+  let candidates = [];
   const now = Date.now();
 
   for (let index = 0; index < entries.length; index += 1) {
@@ -199,18 +201,25 @@ async function tryMatch(io, mode, localSessions, redis) {
         continue;
       }
 
-      const score =
-        matchRank(tier) * 1_000_000 + Math.max(left.user.joinedAt, right.user.joinedAt);
+      const tierRank = matchRank(tier);
 
-      if (!chosen || score < chosen.score) {
-        chosen = { left, right, tier, score };
+      if (bestTierRank === null || tierRank < bestTierRank) {
+        bestTierRank = tierRank;
+        candidates = [{ left, right, tier }];
+        continue;
+      }
+
+      if (tierRank === bestTierRank) {
+        candidates.push({ left, right, tier });
       }
     }
   }
 
-  if (!chosen) {
+  if (!candidates.length) {
     return;
   }
+
+  const chosen = candidates[Math.floor(Math.random() * candidates.length)];
 
   await queueRemove(mode, chosen.left.raw, redis);
   await queueRemove(mode, chosen.right.raw, redis);
@@ -331,17 +340,21 @@ async function emitQueueUpdate(io, mode, redis) {
     const waitMs = now - user.joinedAt;
     const stage = getStage(waitMs);
     const nextExpansionAt =
-      stage === "country"
+      stage === "state"
         ? user.joinedAt + 60_000
-        : stage === "region"
+        : stage === "country"
           ? user.joinedAt + 120_000
-          : null;
+          : stage === "region"
+            ? user.joinedAt + 180_000
+            : null;
     const progressPercent =
-      stage === "country"
+      stage === "state"
         ? Math.min(100, (waitMs / 60_000) * 100)
-        : stage === "region"
+        : stage === "country"
           ? Math.min(100, ((waitMs - 60_000) / 60_000) * 100)
-          : 100;
+          : stage === "region"
+            ? Math.min(100, ((waitMs - 120_000) / 60_000) * 100)
+            : 100;
 
     io.to(user.id).emit("queue-update", {
       position: index + 1,

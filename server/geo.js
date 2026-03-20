@@ -21,6 +21,10 @@ function getRegion(country) {
 }
 
 function getGeoTier(userA, userB) {
+  if (userA?.state && userA.state === userB?.state) {
+    return "state";
+  }
+
   if (userA?.country && userA.country === userB?.country) {
     return "country";
   }
@@ -34,10 +38,14 @@ function getGeoTier(userA, userB) {
 
 function getStage(waitMs) {
   if (waitMs < 60_000) {
-    return "country";
+    return "state";
   }
 
   if (waitMs < 120_000) {
+    return "country";
+  }
+
+  if (waitMs < 180_000) {
     return "region";
   }
 
@@ -45,11 +53,15 @@ function getStage(waitMs) {
 }
 
 function allowsTier(stage, tier) {
-  const rank = { country: 0, region: 1, global: 2 };
+  const rank = { state: 0, country: 1, region: 2, global: 3 };
   return rank[tier] <= rank[stage];
 }
 
 function getStatusLabel(stage, country) {
+  if (stage === "state") {
+    return `Searching for matches in ${country || "your country"} (same state)`;
+  }
+
   if (stage === "country") {
     return `Searching for matches in ${country || "your country"}`;
   }
