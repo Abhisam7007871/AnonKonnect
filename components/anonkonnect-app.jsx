@@ -3,12 +3,15 @@
 import { motion } from "framer-motion";
 import { City, Country, State } from "country-state-city";
 import {
+  Apple,
   Bot,
   Camera,
   ChevronRight,
   CircleDot,
   DoorOpen,
+  Facebook,
   Globe,
+  KeyRound,
   ImagePlus,
   Lock,
   LogIn,
@@ -19,11 +22,13 @@ import {
   Send,
   ShieldCheck,
   Sparkles,
+  Smartphone,
   UserPlus,
   Users,
   Volume2,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { signIn, useSession } from "next-auth/react";
 
 import { AdSensePlaceholder } from "@/components/adsense-placeholder";
 import { ChatBubble } from "@/components/chat-bubble";
@@ -119,7 +124,7 @@ export default function AnonKonnectApp({ initialRooms }) {
   const [activeTab, setActiveTab] = useState("match");
   const [session, setSession] = useState(guestSession);
   const [authMode, setAuthMode] = useState("login");
-  const [authForm, setAuthForm] = useState({ email: "", password: "" });
+  const [authForm, setAuthForm] = useState({ name: "", email: "", phone: "", password: "" });
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
   const [composerActionError, setComposerActionError] = useState("");
@@ -190,6 +195,7 @@ export default function AnonKonnectApp({ initialRooms }) {
   const [isCameraEnabled, setIsCameraEnabled] = useState(true);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [hasRemoteMedia, setHasRemoteMedia] = useState(false);
+  const { data: oauthSession } = useSession();
 
   const currentCountry = useMemo(
     () => allCountries.find((country) => country.name === onboarding.country) || allCountries[0],
@@ -395,6 +401,23 @@ export default function AnonKonnectApp({ initialRooms }) {
       }),
     ]);
   }, [aiPersonaId]);
+
+  useEffect(() => {
+    if (!oauthSession?.token || !oauthSession?.user) {
+      return;
+    }
+    const nextSession = {
+      accessLevel: "registered",
+      token: oauthSession.token,
+      user: oauthSession.user,
+    };
+    persistSession(nextSession);
+    setSession(nextSession);
+    setOnboarding((current) => ({
+      ...current,
+      ...toOnboardingFromUser(oauthSession.user),
+    }));
+  }, [oauthSession]);
 
   useEffect(() => {
     const stored = window.localStorage.getItem("anonkonnect-session");
@@ -741,10 +764,10 @@ export default function AnonKonnectApp({ initialRooms }) {
     const endpoint = authMode === "login" ? "/api/auth/login" : "/api/auth/register";
     const body =
       authMode === "login"
-        ? authForm
+        ? { identifier: authForm.email || authForm.phone, password: authForm.password }
         : {
             ...authForm,
-            nickname: onboarding.nickname,
+            nickname: authForm.name || onboarding.nickname,
             gender: onboarding.gender,
             purpose: onboarding.purpose,
             country: onboarding.country,
@@ -776,7 +799,11 @@ export default function AnonKonnectApp({ initialRooms }) {
       ...current,
       ...toOnboardingFromUser(payload.user),
     }));
-    setAuthForm({ email: authForm.email, password: "" });
+    setAuthForm((current) => ({ ...current, password: "" }));
+  }
+
+  function startSocialLogin(provider) {
+    signIn(provider, { callbackUrl: "/" });
   }
 
   function continueAsGuest() {
@@ -1372,15 +1399,17 @@ export default function AnonKonnectApp({ initialRooms }) {
                     Register
                   </button>
                 </div>
-                <input
-                  className="w-full rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm outline-none ring-0 placeholder:text-slate-500"
-                  onChange={(event) =>
-                    setAuthForm((current) => ({ ...current, email: event.target.value }))
-                  }
-                  placeholder="Email"
-                  type="email"
-                  value={authForm.email}
-                />
+                {authMode === "register" ? (
+                  <input
+                    className="w-full rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm outline-none ring-0 placeholder:text-slate-500"
+                    onChange={(event) =>
+                      setAuthForm((current) => ({ ...current, name: event.target.value }))
+                    }
+                    placeholder="Name"
+                    type="text"
+                    value={authForm.name}
+                  />
+                ) : null}
                 <input
                   className="w-full rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm outline-none ring-0 placeholder:text-slate-500"
                   onChange={(event) =>
@@ -1390,6 +1419,26 @@ export default function AnonKonnectApp({ initialRooms }) {
                   type="password"
                   value={authForm.password}
                 />
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    className="w-full rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm outline-none ring-0 placeholder:text-slate-500"
+                    onChange={(event) =>
+                      setAuthForm((current) => ({ ...current, email: event.target.value }))
+                    }
+                    placeholder="Email"
+                    type="email"
+                    value={authForm.email}
+                  />
+                  <input
+                    className="w-full rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm outline-none ring-0 placeholder:text-slate-500"
+                    onChange={(event) =>
+                      setAuthForm((current) => ({ ...current, phone: event.target.value }))
+                    }
+                    placeholder="Phone"
+                    type="tel"
+                    value={authForm.phone}
+                  />
+                </div>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                   className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-electric to-violet px-4 py-3 text-sm font-medium text-white"
@@ -1405,6 +1454,40 @@ export default function AnonKonnectApp({ initialRooms }) {
                     type="button"
                   >
                     Guest Mode
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2 text-sm"
+                    onClick={() => startSocialLogin("google")}
+                    type="button"
+                  >
+                    <KeyRound className="h-4 w-4" />
+                    Google
+                  </button>
+                  <button
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2 text-sm"
+                    onClick={() => startSocialLogin("facebook")}
+                    type="button"
+                  >
+                    <Facebook className="h-4 w-4" />
+                    Facebook
+                  </button>
+                  <button
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2 text-sm"
+                    onClick={() => startSocialLogin("twitter")}
+                    type="button"
+                  >
+                    <Smartphone className="h-4 w-4" />
+                    X.com
+                  </button>
+                  <button
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2 text-sm"
+                    onClick={() => startSocialLogin("apple")}
+                    type="button"
+                  >
+                    <Apple className="h-4 w-4" />
+                    Apple
                   </button>
                 </div>
                 {authError && <p className="text-sm text-rose-300">{authError}</p>}

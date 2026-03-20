@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 
 const profileSchema = z.object({
   nickname: z.string().min(2),
+  phone: z.string().min(6).max(20).optional().nullable(),
   gender: z.string().optional().nullable(),
   purpose: z.string().optional().nullable(),
   country: z.string().optional().nullable(),
@@ -18,6 +19,7 @@ function toSessionUser(user) {
   return {
     id: user.id,
     email: user.email,
+    phone: user.phone || "",
     nickname: user.nickname,
     accessLevel: "registered",
     country: user.country || "",

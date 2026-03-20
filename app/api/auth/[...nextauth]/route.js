@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import NextAuth from "next-auth";
+import AppleProvider from "next-auth/providers/apple";
 import GoogleProvider from "next-auth/providers/google";
 import FacebookProvider from "next-auth/providers/facebook";
 import TwitterProvider from "next-auth/providers/twitter";
@@ -35,6 +36,12 @@ const providers = [
         },
       })
     : null,
+  process.env.APPLE_CLIENT_ID && process.env.APPLE_CLIENT_SECRET
+    ? AppleProvider({
+        clientId: process.env.APPLE_CLIENT_ID,
+        clientSecret: process.env.APPLE_CLIENT_SECRET,
+      })
+    : null,
 ].filter(Boolean);
 
 function normalizeEmail(profile, account) {
@@ -63,6 +70,7 @@ function buildAnonKonnectSessionUser(user) {
   return {
     id: user.id,
     email: user.email,
+    phone: user.phone || "",
     nickname: user.nickname,
     accessLevel: "registered",
     gender: user.gender || "",
@@ -82,6 +90,7 @@ async function findOrCreateUserFromOAuth({ account, profile }) {
   const country = "United States";
   const state = "";
   const city = "";
+  const phone = "";
 
   if (process.env.DATABASE_URL) {
     const passwordHash = await bcrypt.hash(randomUUID(), 10);
@@ -90,6 +99,7 @@ async function findOrCreateUserFromOAuth({ account, profile }) {
       where: { email },
       update: {
         nickname,
+        phone,
         gender,
         purpose,
         country,
@@ -99,6 +109,7 @@ async function findOrCreateUserFromOAuth({ account, profile }) {
       create: {
         email,
         nickname,
+        phone,
         passwordHash,
         accessLevel: "REGISTERED",
         gender,
@@ -116,6 +127,7 @@ async function findOrCreateUserFromOAuth({ account, profile }) {
   const existing = fallbackStore.users.find((u) => u.email === email);
   if (existing) {
     existing.nickname = nickname;
+    existing.phone = existing.phone || phone;
     existing.gender = gender;
     existing.purpose = purpose;
     existing.country = country;
@@ -127,6 +139,7 @@ async function findOrCreateUserFromOAuth({ account, profile }) {
   const user = {
     id: randomUUID(),
     email,
+    phone,
     nickname,
     passwordHash: await bcrypt.hash(randomUUID(), 10),
     accessLevel: "registered",

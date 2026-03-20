@@ -29,6 +29,7 @@ function normalizeRegisteredUser(session, socketId) {
   return {
     id: session.id,
     email: session.email,
+    phone: session.phone || "",
     nickname: session.nickname || "Member",
     accessLevel: "registered",
     gender: session.gender || "",
