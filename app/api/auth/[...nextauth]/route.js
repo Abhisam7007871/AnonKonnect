@@ -145,7 +145,9 @@ export const runtime = "nodejs";
 
 const authOptions = {
   providers,
-  secret: process.env.NEXTAUTH_SECRET,
+  // NextAuth requires a secret for JWT strategy. If NEXTAUTH_SECRET is missing,
+  // fall back to JWT_SECRET (already used elsewhere) to prevent /api/auth/session 500s.
+  secret: process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET || "anonkonnect-nextauth-dev-secret",
   session: {
     strategy: "jwt",
   },

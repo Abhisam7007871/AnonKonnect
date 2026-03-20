@@ -112,7 +112,7 @@ export default function AnonKonnectApp({ initialRooms }) {
   const [activeTab, setActiveTab] = useState("match");
   const [session, setSession] = useState(guestSession);
   const { data: nextAuthSession, status: nextAuthStatus } = useSession();
-  const [authMode, setAuthMode] = useState("login");
+  const [authMode, setAuthMode] = useState("guest");
   const [authForm, setAuthForm] = useState({ email: "", password: "" });
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
@@ -177,6 +177,7 @@ export default function AnonKonnectApp({ initialRooms }) {
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const matchSessionRef = useRef({ sessionId: "", peerId: "", mode: "text" });
+  const matchPanelRef = useRef(null);
   const [callError, setCallError] = useState("");
   const [isMicMuted, setIsMicMuted] = useState(false);
   const [isCameraEnabled, setIsCameraEnabled] = useState(true);
@@ -808,6 +809,7 @@ export default function AnonKonnectApp({ initialRooms }) {
       signOut({ redirect: false }).catch(() => {});
     }
 
+    setAuthMode("guest");
     const nextSession = {
       ...guestSession,
       user: {
@@ -832,6 +834,7 @@ export default function AnonKonnectApp({ initialRooms }) {
     window.localStorage.removeItem("anonkonnect-session");
     resetMatchMedia();
     setSession(guestSession);
+    setAuthMode("guest");
     setActiveRoom(null);
     setMessages([]);
     setRoomMessages(roomSeedMessages);
@@ -861,6 +864,12 @@ export default function AnonKonnectApp({ initialRooms }) {
       progressPercent: 0,
       nextExpansionAt: Date.now() + 60_000,
       message: "Joining queue...",
+    });
+
+    // Scroll into the match/chat area so the user immediately sees
+    // Text/Audio/Video UI for the selected mode.
+    window.requestAnimationFrame(() => {
+      matchPanelRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
     });
 
     let nextSession = session;
@@ -1477,71 +1486,75 @@ export default function AnonKonnectApp({ initialRooms }) {
                     Register
                   </button>
                 </div>
-                <input
-                  className="w-full rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm outline-none ring-0 placeholder:text-slate-500"
-                  onChange={(event) =>
-                    setAuthForm((current) => ({ ...current, email: event.target.value }))
-                  }
-                  placeholder="Email"
-                  type="email"
-                  value={authForm.email}
-                />
-                <input
-                  className="w-full rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm outline-none ring-0 placeholder:text-slate-500"
-                  onChange={(event) =>
-                    setAuthForm((current) => ({ ...current, password: event.target.value }))
-                  }
-                  placeholder="Password"
-                  type="password"
-                  value={authForm.password}
-                />
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-electric to-violet px-4 py-3 text-sm font-medium text-white"
-                    disabled={isAuthLoading}
-                    type="submit"
-                  >
-                    {authMode === "login" ? <LogIn className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
-                    {isAuthLoading ? "Working..." : authMode === "login" ? "Login" : "Register"}
-                  </button>
-                  <button
-                    className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm"
-                    onClick={continueAsGuest}
-                    type="button"
-                  >
-                    Guest Mode
-                  </button>
-                </div>
-                <div className="pt-1">
-                  <p className="text-xs uppercase tracking-[0.32em] text-slate-500">Or continue with</p>
-                  <div className="mt-2 grid gap-2">
-                    <button
-                      className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm text-slate-900 transition hover:bg-white/90"
-                      onClick={() => signIn("google", { callbackUrl: "/" })}
-                      type="button"
-                      disabled={nextAuthStatus === "loading"}
-                    >
-                      Google
-                    </button>
-                    <button
-                      className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm text-slate-900 transition hover:bg-white/90"
-                      onClick={() => signIn("facebook", { callbackUrl: "/" })}
-                      type="button"
-                      disabled={nextAuthStatus === "loading"}
-                    >
-                      Facebook
-                    </button>
-                    <button
-                      className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm text-slate-900 transition hover:bg-white/90"
-                      onClick={() => signIn("twitter", { callbackUrl: "/" })}
-                      type="button"
-                      disabled={nextAuthStatus === "loading"}
-                    >
-                      X (Twitter)
-                    </button>
-                  </div>
-                </div>
-                {authError && <p className="text-sm text-rose-300">{authError}</p>}
+                {authMode !== "guest" ? (
+                  <>
+                    <input
+                      className="w-full rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm outline-none ring-0 placeholder:text-slate-500"
+                      onChange={(event) =>
+                        setAuthForm((current) => ({ ...current, email: event.target.value }))
+                      }
+                      placeholder="Email"
+                      type="email"
+                      value={authForm.email}
+                    />
+                    <input
+                      className="w-full rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm outline-none ring-0 placeholder:text-slate-500"
+                      onChange={(event) =>
+                        setAuthForm((current) => ({ ...current, password: event.target.value }))
+                      }
+                      placeholder="Password"
+                      type="password"
+                      value={authForm.password}
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-electric to-violet px-4 py-3 text-sm font-medium text-white"
+                        disabled={isAuthLoading}
+                        type="submit"
+                      >
+                        {authMode === "login" ? <LogIn className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
+                        {isAuthLoading ? "Working..." : authMode === "login" ? "Login" : "Register"}
+                      </button>
+                      <button
+                        className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm"
+                        onClick={continueAsGuest}
+                        type="button"
+                      >
+                        Guest Mode
+                      </button>
+                    </div>
+                    <div className="pt-1">
+                      <p className="text-xs uppercase tracking-[0.32em] text-slate-500">Or continue with</p>
+                      <div className="mt-2 grid gap-2">
+                        <button
+                          className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm text-slate-900 transition hover:bg-white/90"
+                          onClick={() => signIn("google", { callbackUrl: "/" })}
+                          type="button"
+                          disabled={nextAuthStatus === "loading"}
+                        >
+                          Google
+                        </button>
+                        <button
+                          className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm text-slate-900 transition hover:bg-white/90"
+                          onClick={() => signIn("facebook", { callbackUrl: "/" })}
+                          type="button"
+                          disabled={nextAuthStatus === "loading"}
+                        >
+                          Facebook
+                        </button>
+                        <button
+                          className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm text-slate-900 transition hover:bg-white/90"
+                          onClick={() => signIn("twitter", { callbackUrl: "/" })}
+                          type="button"
+                          disabled={nextAuthStatus === "loading"}
+                        >
+                          X (Twitter)
+                        </button>
+                      </div>
+                    </div>
+                    {authError && <p className="text-sm text-rose-300">{authError}</p>}
+                  </>
+                ) : null}
               </form>
             </motion.div>
 
@@ -1708,7 +1721,10 @@ export default function AnonKonnectApp({ initialRooms }) {
             <AdSensePlaceholder label="Inline ad unit between discovery modules and active chat." />
 
             {activeTab === "match" && (
-              <section className="grid gap-4 xl:grid-cols-[0.88fr_1.12fr]">
+              <section
+                ref={matchPanelRef}
+                className="grid gap-4 xl:grid-cols-[0.88fr_1.12fr]"
+              >
                 <div className="rounded-[32px] border border-slate-200/80 bg-white/80 p-5 backdrop-blur-xl">
                   <div className="flex items-center justify-between">
                     <div>
