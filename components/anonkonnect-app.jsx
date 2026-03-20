@@ -28,7 +28,7 @@ import {
   Volume2,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { signIn, useSession } from "next-auth/react";
+import { getProviders, signIn, useSession } from "next-auth/react";
 
 import { AdSensePlaceholder } from "@/components/adsense-placeholder";
 import { ChatBubble } from "@/components/chat-bubble";
@@ -195,6 +195,7 @@ export default function AnonKonnectApp({ initialRooms }) {
   const [isCameraEnabled, setIsCameraEnabled] = useState(true);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [hasRemoteMedia, setHasRemoteMedia] = useState(false);
+  const [availableSocialProviders, setAvailableSocialProviders] = useState({});
   const { data: oauthSession } = useSession();
 
   const currentCountry = useMemo(
@@ -401,6 +402,26 @@ export default function AnonKonnectApp({ initialRooms }) {
       }),
     ]);
   }, [aiPersonaId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadSocialProviders() {
+      try {
+        const providers = (await getProviders()) || {};
+        if (!cancelled) {
+          setAvailableSocialProviders(providers);
+        }
+      } catch {
+        if (!cancelled) {
+          setAvailableSocialProviders({});
+        }
+      }
+    }
+    loadSocialProviders();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!oauthSession?.token || !oauthSession?.user) {
@@ -805,6 +826,11 @@ export default function AnonKonnectApp({ initialRooms }) {
   function startSocialLogin(provider) {
     signIn(provider, { callbackUrl: "/" });
   }
+
+  const hasGoogleProvider = Boolean(availableSocialProviders.google);
+  const hasFacebookProvider = Boolean(availableSocialProviders.facebook);
+  const hasTwitterProvider = Boolean(availableSocialProviders.twitter);
+  const hasAppleProvider = Boolean(availableSocialProviders.apple);
 
   function continueAsGuest() {
     const nextSession = {
@@ -1456,40 +1482,50 @@ export default function AnonKonnectApp({ initialRooms }) {
                     Guest Mode
                   </button>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2 text-sm"
-                    onClick={() => startSocialLogin("google")}
-                    type="button"
-                  >
-                    <KeyRound className="h-4 w-4" />
-                    Google
-                  </button>
-                  <button
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2 text-sm"
-                    onClick={() => startSocialLogin("facebook")}
-                    type="button"
-                  >
-                    <Facebook className="h-4 w-4" />
-                    Facebook
-                  </button>
-                  <button
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2 text-sm"
-                    onClick={() => startSocialLogin("twitter")}
-                    type="button"
-                  >
-                    <Smartphone className="h-4 w-4" />
-                    X.com
-                  </button>
-                  <button
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2 text-sm"
-                    onClick={() => startSocialLogin("apple")}
-                    type="button"
-                  >
-                    <Apple className="h-4 w-4" />
-                    Apple
-                  </button>
-                </div>
+                {hasGoogleProvider || hasFacebookProvider || hasTwitterProvider || hasAppleProvider ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    {hasGoogleProvider ? (
+                      <button
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2 text-sm"
+                        onClick={() => startSocialLogin("google")}
+                        type="button"
+                      >
+                        <KeyRound className="h-4 w-4" />
+                        Google
+                      </button>
+                    ) : null}
+                    {hasFacebookProvider ? (
+                      <button
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2 text-sm"
+                        onClick={() => startSocialLogin("facebook")}
+                        type="button"
+                      >
+                        <Facebook className="h-4 w-4" />
+                        Facebook
+                      </button>
+                    ) : null}
+                    {hasTwitterProvider ? (
+                      <button
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2 text-sm"
+                        onClick={() => startSocialLogin("twitter")}
+                        type="button"
+                      >
+                        <Smartphone className="h-4 w-4" />
+                        X.com
+                      </button>
+                    ) : null}
+                    {hasAppleProvider ? (
+                      <button
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2 text-sm"
+                        onClick={() => startSocialLogin("apple")}
+                        type="button"
+                      >
+                        <Apple className="h-4 w-4" />
+                        Apple
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
                 {authError && <p className="text-sm text-rose-300">{authError}</p>}
               </form>
             </motion.div>
