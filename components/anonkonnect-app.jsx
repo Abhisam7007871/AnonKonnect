@@ -28,7 +28,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AdSensePlaceholder } from "@/components/adsense-placeholder";
 import { ChatBubble } from "@/components/chat-bubble";
 import { aiPersonas, buildPersonaIntro, getPersonaConfig } from "@/lib/demo-ai";
-import { getSocket, resetSocket } from "@/lib/socket-client";
+import { getSocket, getSocketUrl, resetSocket } from "@/lib/socket-client";
 import { cn, formatRelativeClock, toTitleCase } from "@/lib/utils";
 import { signIn, signOut, useSession } from "next-auth/react";
 
@@ -526,7 +526,9 @@ export default function AnonKonnectApp({ initialRooms }) {
     });
     socket.on("connect_error", (error) => {
       setIsConnected(false);
-      setCallError(error?.message || "Unable to connect to server.");
+      const socketUrl = getSocketUrl();
+      const msg = error?.message || "Unable to connect to server.";
+      setCallError(`${msg} (socketUrl: ${socketUrl})`);
       setQueueStatus(null);
     });
     socket.on("disconnect", () => setIsConnected(false));
@@ -868,9 +870,19 @@ export default function AnonKonnectApp({ initialRooms }) {
 
     // Scroll into the match/chat area so the user immediately sees
     // Text/Audio/Video UI for the selected mode.
-    window.requestAnimationFrame(() => {
-      matchPanelRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
-    });
+    const scrollAttempts = { current: 0 };
+    const tryScroll = () => {
+      scrollAttempts.current += 1;
+      const el = matchPanelRef.current;
+      if (el?.scrollIntoView) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+      if (scrollAttempts.current < 6) {
+        window.requestAnimationFrame(tryScroll);
+      }
+    };
+    window.requestAnimationFrame(tryScroll);
 
     let nextSession = session;
     try {
