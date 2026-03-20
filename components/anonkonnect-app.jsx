@@ -491,9 +491,14 @@ export default function AnonKonnectApp({ initialRooms }) {
 
     socket.on("connect", () => {
       setIsConnected(true);
+      setAuthError("");
       socket.emit("list_rooms");
     });
     socket.on("disconnect", () => setIsConnected(false));
+    socket.on("connect_error", () => {
+      setIsConnected(false);
+      setAuthError("Realtime connection failed. Retrying...");
+    });
     socket.on("connected", (payload) => setSocketId(payload.userId));
     socket.on("queue-update", (payload) => setQueueStatus(payload));
     socket.on("matched", (payload) => {
@@ -762,11 +767,6 @@ export default function AnonKonnectApp({ initialRooms }) {
   }
 
   async function joinMatchmakingQueue() {
-    if (!isConnected) {
-      setAuthError("Realtime server is reconnecting. Please wait until Socket status is Live.");
-      return;
-    }
-
     let nextSession = session;
     try {
       nextSession = await syncRegisteredProfile();
@@ -901,11 +901,6 @@ export default function AnonKonnectApp({ initialRooms }) {
   }
 
   async function createRoom() {
-    if (!isConnected) {
-      setAuthError("Realtime server is reconnecting. Please wait until Socket status is Live.");
-      return;
-    }
-
     if (!isRegistered) {
       setAuthError("Register or log in to create private rooms.");
       return;
@@ -953,11 +948,6 @@ export default function AnonKonnectApp({ initialRooms }) {
   }
 
   async function joinRoom(room) {
-    if (!isConnected) {
-      setAuthError("Realtime server is reconnecting. Please wait until Socket status is Live.");
-      return;
-    }
-
     let nextSession = session;
     if (isRegistered) {
       try {
@@ -984,11 +974,6 @@ export default function AnonKonnectApp({ initialRooms }) {
   }
 
   async function requestPrivateRoom() {
-    if (!isConnected) {
-      setAuthError("Realtime server is reconnecting. Please wait until Socket status is Live.");
-      return;
-    }
-
     if (!privateRoomKey.trim()) {
       return;
     }
@@ -1016,11 +1001,6 @@ export default function AnonKonnectApp({ initialRooms }) {
   }
 
   function resolveAccessRequest(request, decision) {
-    if (!isConnected) {
-      setAuthError("Realtime server is reconnecting. Please wait until Socket status is Live.");
-      return;
-    }
-
     const socket = getSocket();
     socket.emit("respond_room_request", {
       roomId: request.roomId,
