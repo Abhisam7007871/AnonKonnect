@@ -12,6 +12,14 @@ services:
         sync: false
       - key: JWT_SECRET
         sync: false
+      - key: NEXTAUTH_SECRET
+        sync: false
+      - key: NEXTAUTH_URL
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_MODEL
