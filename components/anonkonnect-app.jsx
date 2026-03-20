@@ -49,6 +49,14 @@ const rtcConfiguration = {
   ],
 };
 
+if (process.env.NEXT_PUBLIC_TURN_URL) {
+  rtcConfiguration.iceServers.push({
+    urls: [process.env.NEXT_PUBLIC_TURN_URL],
+    username: process.env.NEXT_PUBLIC_TURN_USERNAME || "",
+    credential: process.env.NEXT_PUBLIC_TURN_CREDENTIAL || "",
+  });
+}
+
 const guestSession = {
   accessLevel: "guest",
   token: null,
@@ -174,6 +182,7 @@ export default function AnonKonnectApp({ initialRooms }) {
   const screenShareStreamRef = useRef(null);
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
+  const remoteAudioRef = useRef(null);
   const matchSessionRef = useRef({ sessionId: "", peerId: "", mode: "text" });
   const [callError, setCallError] = useState("");
   const [isMicMuted, setIsMicMuted] = useState(false);
@@ -255,6 +264,7 @@ export default function AnonKonnectApp({ initialRooms }) {
     setCallError("");
     attachMedia(localVideoRef.current, null, true);
     attachMedia(remoteVideoRef.current, null, false);
+    attachMedia(remoteAudioRef.current, null, false);
   }
 
   async function ensureLocalMedia(mode = matchSessionRef.current.mode) {
@@ -302,6 +312,7 @@ export default function AnonKonnectApp({ initialRooms }) {
 
     remoteStreamRef.current = new MediaStream();
     attachMedia(remoteVideoRef.current, remoteStreamRef.current, false);
+    attachMedia(remoteAudioRef.current, remoteStreamRef.current, false);
 
     pc.ontrack = (event) => {
       const [remoteStream] = event.streams;
@@ -312,6 +323,7 @@ export default function AnonKonnectApp({ initialRooms }) {
       }
       setHasRemoteMedia(true);
       attachMedia(remoteVideoRef.current, remoteStreamRef.current, false);
+      attachMedia(remoteAudioRef.current, remoteStreamRef.current, false);
     };
 
     pc.onicecandidate = (event) => {
@@ -1589,34 +1601,41 @@ export default function AnonKonnectApp({ initialRooms }) {
                     </div>
                     {matchState.typing && <p className="text-sm text-aqua">typing...</p>}
                   </div>
-                  {matchState.mode !== "text" && (
-                    <div className="mt-4 grid gap-3 md:grid-cols-2">
-                      <div className="rounded-[28px] border border-slate-200/80 bg-white/80 p-3">
-                        <p className="mb-2 text-xs uppercase tracking-[0.24em] text-slate-500">You</p>
+                  {matchState.mode === "video" && (
+                    <div className="relative mt-4 overflow-hidden rounded-[28px] border border-slate-200/80 bg-slate-900 p-2">
+                      <video
+                        ref={remoteVideoRef}
+                        autoPlay
+                        className="aspect-video w-full rounded-3xl object-cover"
+                        playsInline
+                      />
+                      <div className="pointer-events-none absolute bottom-4 right-4 w-40 overflow-hidden rounded-2xl border border-white/30 bg-slate-900/90 shadow-xl">
                         <video
                           ref={localVideoRef}
                           autoPlay
-                          className="aspect-video w-full rounded-3xl bg-slate-100 object-cover"
+                          className="aspect-video w-full object-cover"
                           muted
                           playsInline
                         />
                       </div>
-                      <div className="rounded-[28px] border border-slate-200/80 bg-white/80 p-3">
-                        <p className="mb-2 text-xs uppercase tracking-[0.24em] text-slate-500">
-                          {matchState.peer?.nickname || "Partner"}
+                      {!hasRemoteMedia && (
+                        <p className="absolute left-4 top-4 rounded-xl bg-black/50 px-3 py-1 text-xs text-white">
+                          Waiting for stranger video...
                         </p>
-                        <video
-                          ref={remoteVideoRef}
-                          autoPlay
-                          className="aspect-video w-full rounded-3xl bg-slate-100 object-cover"
-                          playsInline
-                        />
-                        {!hasRemoteMedia && (
-                          <p className="mt-2 text-xs text-slate-500">Waiting for remote media...</p>
-                        )}
-                      </div>
+                      )}
                     </div>
                   )}
+                  {matchState.mode === "audio" && (
+                    <div className="mt-4 rounded-[28px] border border-slate-200/80 bg-white/80 p-4">
+                      <p className="text-sm text-slate-600">
+                        Audio call active with {matchState.peer?.nickname || "stranger"}.
+                      </p>
+                      {!hasRemoteMedia && (
+                        <p className="mt-2 text-xs text-slate-500">Waiting for stranger audio...</p>
+                      )}
+                    </div>
+                  )}
+                  <audio ref={remoteAudioRef} autoPlay />
                   {callError && (
                     <div className="mt-4 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
                       {callError}
