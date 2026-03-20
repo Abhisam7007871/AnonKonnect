@@ -653,24 +653,31 @@ export default function AnonKonnectApp({ initialRooms }) {
     });
     socket.on("session:skip", () => {
       resetMatchMedia();
+      setActiveTab("match");
       setMatchState({
         sessionId: "",
         peerId: "",
         peer: null,
-        mode: "text",
+        mode: matchSessionRef.current.mode || selectedMode,
         typing: false,
       });
       setMessages([]);
     });
     socket.on("session:partner_left", () => {
       resetMatchMedia();
+      const mode = matchSessionRef.current.mode || selectedMode;
+      setActiveTab("match");
+      setSelectedMode(mode);
       setMatchState({
         sessionId: "",
         peerId: "",
         peer: null,
-        mode: "text",
+        mode,
         typing: false,
       });
+      setMessages([]);
+      // Partner left without a "skip": we must re-enter the queue so waitlisted users can match.
+      joinMatchmakingQueue(mode);
     });
     socket.on("rooms_snapshot_broadcast", () => {
       socket.emit("list_rooms");
@@ -830,8 +837,21 @@ export default function AnonKonnectApp({ initialRooms }) {
     setRoomMessages(roomSeedMessages);
   }
 
-  async function joinMatchmakingQueue() {
+  async function joinMatchmakingQueue(modeOverride) {
+    const mode = modeOverride || selectedMode;
     setCallError("");
+
+    setActiveTab("match");
+    setSelectedMode(mode);
+    setMatchState((current) => ({
+      ...current,
+      sessionId: "",
+      peerId: "",
+      peer: null,
+      mode,
+      typing: false,
+    }));
+    setMessages([]);
 
     // Optimistic UI so the user immediately sees feedback.
     setQueueStatus({
@@ -882,7 +902,7 @@ export default function AnonKonnectApp({ initialRooms }) {
     }
 
     socket.emit("join-queue", {
-      mode: selectedMode,
+      mode,
       profile: {
         ...nextSession.user,
         nickname: onboarding.nickname || nextSession.user.nickname || "Guest",
@@ -1670,37 +1690,17 @@ export default function AnonKonnectApp({ initialRooms }) {
                 <button
                   className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-electric to-violet px-4 py-3 font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
                   onClick={joinMatchmakingQueue}
-                  disabled={!isConnected}
                   type="button"
+                  disabled={!!queueStatus && !matchState.sessionId}
                 >
                   <Radio className="h-4 w-4" />
-                  {isConnected ? "Start Matching" : "Connecting..."}
+                  {queueStatus && !matchState.sessionId ? "Searching..." : "Search"}
                 </button>
 
                 <div className="mt-4 rounded-3xl border border-slate-200/80 bg-white/75 p-4">
-                  <div className="flex items-center justify-between text-sm">
-                    <p className="text-slate-600">
-                      {queueStatus?.message || `Searching for matches in ${onboarding.country}...`}
-                    </p>
-                    <span className="rounded-full bg-white/80 px-3 py-1 text-xs text-slate-600">
-                      {queueCountdown}
-                    </span>
-                  </div>
-                  <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/80">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-aqua to-electric"
-                      style={{
-                        width: queueStatus?.progressPercent ? `${queueStatus.progressPercent}%` : "8%",
-                      }}
-                    />
-                  </div>
-                  <div className="mt-4 flex items-center gap-4 text-xs text-slate-500">
-                    <span className="inline-flex items-center gap-2">
-                      <Globe className="h-3.5 w-3.5" />
-                      {queueStatus?.stage ? toTitleCase(queueStatus.stage) : "Country"}
-                    </span>
-                    <span>{queueStatus?.totalInQueue || 0} people in queue</span>
-                  </div>
+                  <p className="text-sm text-slate-600">
+                    Click `Search` to start matching in Text, Audio, or Video.
+                  </p>
                 </div>
               </section>
             </div>
@@ -1732,6 +1732,38 @@ export default function AnonKonnectApp({ initialRooms }) {
                       <p className="font-medium text-slate-900">Realtime touches</p>
                       <p className="mt-2">Typing indicators, read receipts, images, GIFs, and voice notes are live.</p>
                     </div>
+
+                    {!matchState.sessionId && (
+                      <div className="rounded-3xl border border-slate-200/80 bg-white/75 p-4">
+                        {queueStatus ? (
+                          <>
+                            <div className="flex items-center justify-between text-sm">
+                              <p className="text-slate-600">{queueStatus.message}</p>
+                              <span className="rounded-full bg-white/80 px-3 py-1 text-xs text-slate-600">
+                                {queueCountdown}
+                              </span>
+                            </div>
+                            <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/80">
+                              <div
+                                className="h-full rounded-full bg-gradient-to-r from-aqua to-electric"
+                                style={{
+                                  width: queueStatus.progressPercent ? `${queueStatus.progressPercent}%` : "8%",
+                                }}
+                              />
+                            </div>
+                            <div className="mt-4 flex items-center gap-4 text-xs text-slate-500">
+                              <span className="inline-flex items-center gap-2">
+                                <Globe className="h-3.5 w-3.5" />
+                                {queueStatus.stage ? toTitleCase(queueStatus.stage) : "Country"}
+                              </span>
+                              <span>{queueStatus.totalInQueue || 0} people in queue</span>
+                            </div>
+                          </>
+                        ) : (
+                          <p className="text-sm text-slate-600">Click Search to find your next match.</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
