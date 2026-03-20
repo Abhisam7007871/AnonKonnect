@@ -1,8 +1,12 @@
 function initSignaling(io, socket, localSessions, redis) {
+  function hasRedis(client) {
+    return Boolean(client && client.isOpen);
+  }
+
   async function verifySession(sessionId, socketId) {
     let session = localSessions.get(sessionId);
 
-    if (!session && redis) {
+    if (!session && hasRedis(redis)) {
       try {
         const sessionStr = await redis.get(`session:${sessionId}`);
         if (sessionStr) {

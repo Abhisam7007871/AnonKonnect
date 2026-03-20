@@ -6,69 +6,109 @@ const memQueues = { text: [], audio: [], video: [] };
 const memReconnect = new Map();
 let tickerStarted = false;
 
+function hasRedis(redis) {
+  return Boolean(redis && redis.isOpen);
+}
+
 async function queuePush(mode, userStr, redis) {
-  if (redis) {
-    await redis.rPush(`queue:${mode}`, userStr);
-  } else {
-    memQueues[mode].push(userStr);
+  if (hasRedis(redis)) {
+    try {
+      await redis.rPush(`queue:${mode}`, userStr);
+      return;
+    } catch {
+      // Fall back to memory queue when Redis is unreachable.
+    }
   }
+
+  memQueues[mode].push(userStr);
 }
 
 async function queueGetAll(mode, redis) {
-  if (redis) {
-    return await redis.lRange(`queue:${mode}`, 0, -1);
+  if (hasRedis(redis)) {
+    try {
+      return await redis.lRange(`queue:${mode}`, 0, -1);
+    } catch {
+      // Fall back to memory queue when Redis is unreachable.
+    }
   }
 
   return [...memQueues[mode]];
 }
 
 async function queueRemove(mode, userStr, redis) {
-  if (redis) {
-    await redis.lRem(`queue:${mode}`, 0, userStr);
-  } else {
-    memQueues[mode] = memQueues[mode].filter((entry) => entry !== userStr);
+  if (hasRedis(redis)) {
+    try {
+      await redis.lRem(`queue:${mode}`, 0, userStr);
+      return;
+    } catch {
+      // Fall back to memory queue when Redis is unreachable.
+    }
   }
+
+  memQueues[mode] = memQueues[mode].filter((entry) => entry !== userStr);
 }
 
 async function setReconnect(socketId, data, redis) {
-  if (redis) {
-    await redis.set(`reconnect:${socketId}`, JSON.stringify(data), { EX: 60 });
-  } else {
-    memReconnect.set(socketId, data);
-    setTimeout(() => memReconnect.delete(socketId), 60_000);
+  if (hasRedis(redis)) {
+    try {
+      await redis.set(`reconnect:${socketId}`, JSON.stringify(data), { EX: 60 });
+      return;
+    } catch {
+      // Fall back to memory reconnect map when Redis is unreachable.
+    }
   }
+
+  memReconnect.set(socketId, data);
+  setTimeout(() => memReconnect.delete(socketId), 60_000);
 }
 
 async function getReconnect(socketId, redis) {
-  if (redis) {
-    const data = await redis.get(`reconnect:${socketId}`);
-    return data ? JSON.parse(data) : null;
+  if (hasRedis(redis)) {
+    try {
+      const data = await redis.get(`reconnect:${socketId}`);
+      return data ? JSON.parse(data) : null;
+    } catch {
+      // Fall back to memory reconnect map when Redis is unreachable.
+    }
   }
 
   return memReconnect.get(socketId) || null;
 }
 
 async function delReconnect(socketId, redis) {
-  if (redis) {
-    await redis.del(`reconnect:${socketId}`);
-  } else {
-    memReconnect.delete(socketId);
+  if (hasRedis(redis)) {
+    try {
+      await redis.del(`reconnect:${socketId}`);
+      return;
+    } catch {
+      // Fall back to memory reconnect map when Redis is unreachable.
+    }
   }
+
+  memReconnect.delete(socketId);
 }
 
 async function setSession(sessionId, session, redis) {
-  if (redis) {
-    await redis.set(`session:${sessionId}`, JSON.stringify(session), { EX: 3600 });
+  if (hasRedis(redis)) {
+    try {
+      await redis.set(`session:${sessionId}`, JSON.stringify(session), { EX: 3600 });
+    } catch {
+      // Session still exists in localSessions; do not fail matching.
+    }
   }
 }
 
 async function getSession(sessionId, localSessions, redis) {
   let session = localSessions.get(sessionId);
 
-  if (!session && redis) {
-    const persisted = await redis.get(`session:${sessionId}`);
-    if (persisted) {
-      session = JSON.parse(persisted);
+  if (!session && hasRedis(redis)) {
+    try {
+      const persisted = await redis.get(`session:${sessionId}`);
+      if (persisted) {
+        session = JSON.parse(persisted);
+      }
+    } catch {
+      // Ignore Redis read failures and continue with in-memory data.
     }
   }
 
@@ -77,8 +117,12 @@ async function getSession(sessionId, localSessions, redis) {
 
 async function delSession(sessionId, localSessions, redis) {
   localSessions.delete(sessionId);
-  if (redis) {
-    await redis.del(`session:${sessionId}`);
+  if (hasRedis(redis)) {
+    try {
+      await redis.del(`session:${sessionId}`);
+    } catch {
+      // Ignore Redis delete failures.
+    }
   }
 }
 
