@@ -794,6 +794,13 @@ export default function AnonKonnectApp({ initialRooms }) {
     setRoomDraft((current) => `${current}${emoji}`);
   }
 
+  function handleComposerEnter(event, onSubmit) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      onSubmit();
+    }
+  }
+
   function sendMessage(kind = "text", content = draft) {
     if (!matchState.sessionId || !content) {
       return;
@@ -1658,6 +1665,7 @@ export default function AnonKonnectApp({ initialRooms }) {
                         setDraft(event.target.value);
                         onTypingChat();
                       }}
+                      onKeyDown={(event) => handleComposerEnter(event, () => sendMessage("text"))}
                       placeholder="Type a message, add emoji, share a GIF, or drop a voice note."
                       value={draft}
                     />
@@ -1907,6 +1915,7 @@ export default function AnonKonnectApp({ initialRooms }) {
                             onRoomTyping();
                           }
                         }}
+                        onKeyDown={(event) => handleComposerEnter(event, () => sendRoomMessage("text"))}
                         placeholder="Message the room, add emoji, or send a sticker..."
                         value={roomDraft}
                       />
@@ -2070,6 +2079,7 @@ export default function AnonKonnectApp({ initialRooms }) {
                     <textarea
                       className="min-h-24 flex-1 rounded-3xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm"
                       onChange={(event) => setAiDraft(event.target.value)}
+                      onKeyDown={(event) => handleComposerEnter(event, sendAiPrompt)}
                       placeholder="Ask for advice, jokes, or a roleplay setup."
                       value={aiDraft}
                     />
