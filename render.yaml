@@ -2,7 +2,7 @@ services:
   - type: web
     runtime: node
     name: anonkonnect-server
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci --include=dev && npm run build
     startCommand: npm start
     healthCheckPath: /health
     envVars:
@@ -20,5 +20,3 @@ services:
         sync: false
       - key: XAI_MODEL
         value: grok-beta
-      - key: NODE_ENV
-        value: production
