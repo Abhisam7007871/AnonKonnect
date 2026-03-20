@@ -112,7 +112,7 @@ export default function AnonKonnectApp({ initialRooms }) {
   const [activeTab, setActiveTab] = useState("match");
   const [session, setSession] = useState(guestSession);
   const { data: nextAuthSession, status: nextAuthStatus } = useSession();
-  const [authMode, setAuthMode] = useState("guest");
+  const [authMode, setAuthMode] = useState("login");
   const [authForm, setAuthForm] = useState({ email: "", password: "" });
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
