@@ -183,6 +183,7 @@ export default function AnonKonnectApp({ initialRooms }) {
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const remoteAudioRef = useRef(null);
+  const pendingIceCandidatesRef = useRef([]);
   const matchSessionRef = useRef({ sessionId: "", peerId: "", mode: "text" });
   const [callError, setCallError] = useState("");
   const [isMicMuted, setIsMicMuted] = useState(false);
@@ -262,6 +263,7 @@ export default function AnonKonnectApp({ initialRooms }) {
     setIsScreenSharing(false);
     setHasRemoteMedia(false);
     setCallError("");
+    pendingIceCandidatesRef.current = [];
     attachMedia(localVideoRef.current, null, true);
     attachMedia(remoteVideoRef.current, null, false);
     attachMedia(remoteAudioRef.current, null, false);
@@ -361,6 +363,24 @@ export default function AnonKonnectApp({ initialRooms }) {
       sessionId: matchSessionRef.current.sessionId,
       offer: pc.localDescription,
     });
+  }
+
+  async function flushPendingIceCandidates() {
+    if (!peerConnectionRef.current || !peerConnectionRef.current.remoteDescription) {
+      return;
+    }
+    if (pendingIceCandidatesRef.current.length === 0) {
+      return;
+    }
+    const queued = [...pendingIceCandidatesRef.current];
+    pendingIceCandidatesRef.current = [];
+    for (const candidate of queued) {
+      try {
+        await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch {
+        // Ignore stale or malformed queued ICE entries.
+      }
+    }
   }
 
   useEffect(() => {
@@ -562,6 +582,7 @@ export default function AnonKonnectApp({ initialRooms }) {
       try {
         const pc = await ensurePeerConnection(matchSessionRef.current.mode);
         await pc.setRemoteDescription(new RTCSessionDescription(offer));
+        await flushPendingIceCandidates();
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
         socket.emit("answer", {
@@ -580,12 +601,18 @@ export default function AnonKonnectApp({ initialRooms }) {
 
       try {
         await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(answer));
+        await flushPendingIceCandidates();
       } catch (error) {
         setCallError(error.message || "Unable to connect the remote stream.");
       }
     });
     socket.on("ice-candidate", async ({ candidate, sessionId }) => {
       if (!peerConnectionRef.current || sessionId !== matchSessionRef.current.sessionId || !candidate) {
+        return;
+      }
+
+      if (!peerConnectionRef.current.remoteDescription) {
+        pendingIceCandidatesRef.current.push(candidate);
         return;
       }
 
@@ -1606,7 +1633,7 @@ export default function AnonKonnectApp({ initialRooms }) {
                       <video
                         ref={remoteVideoRef}
                         autoPlay
-                        className="aspect-video w-full rounded-3xl object-cover"
+                        className="aspect-video min-h-[360px] w-full rounded-3xl object-cover"
                         playsInline
                       />
                       <div className="pointer-events-none absolute bottom-4 right-4 w-40 overflow-hidden rounded-2xl border border-white/30 bg-slate-900/90 shadow-xl">
