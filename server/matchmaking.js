@@ -172,6 +172,10 @@ async function initMatchmaking(io, socket, localSessions, redis) {
     const candidate = buildCandidate(socket.id, mode, profile);
     await removeFromAllQueues(socket.id, redis);
     await queuePush(mode, JSON.stringify(candidate), redis);
+    const queueAfterJoin = await queueGetAll(mode, redis);
+    console.log(
+      `[MATCHMAKING] join-queue socket=${socket.id} mode=${mode} country=${profile?.country || "unknown"} queueSize=${queueAfterJoin.length}`,
+    );
     await emitQueueUpdate(io, mode, redis);
     await tryMatch(io, mode, localSessions, redis);
   });
@@ -225,6 +229,11 @@ async function tryMatch(io, mode, localSessions, redis) {
     .sort((left, right) => left.user.joinedAt - right.user.joinedAt);
 
   if (entries.length < 2) {
+    if (entries.length === 1) {
+      console.log(
+        `[MATCHMAKING] waiting mode=${mode} onlyOneInQueue socket=${entries[0]?.user?.id || "unknown"}`,
+      );
+    }
     return;
   }
 
@@ -260,10 +269,14 @@ async function tryMatch(io, mode, localSessions, redis) {
   }
 
   if (!candidates.length) {
+    console.log(`[MATCHMAKING] no-compatible-pair mode=${mode} queueSize=${entries.length}`);
     return;
   }
 
   const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+  console.log(
+    `[MATCHMAKING] pairing mode=${mode} tier=${chosen.tier} left=${chosen.left.user.id} right=${chosen.right.user.id}`,
+  );
 
   await queueRemove(mode, chosen.left.raw, redis);
   await queueRemove(mode, chosen.right.raw, redis);
@@ -303,6 +316,9 @@ async function forceMatch(io, user1, user2, mode, localSessions, redis, matchTie
   if (socket2) {
     socket2.join(sessionId);
   }
+  console.log(
+    `[MATCHMAKING] matched session=${sessionId} mode=${mode} tier=${matchTier} user1=${user1.id} user2=${user2.id} socket1=${Boolean(socket1)} socket2=${Boolean(socket2)}`,
+  );
 
   io.to(user1.id).emit("matched", {
     sessionId,
@@ -423,6 +439,7 @@ async function removeFromAllQueues(socketId, redis) {
 }
 
 async function handleDisconnect(io, socket, localSessions, redis) {
+  console.log(`[MATCHMAKING] disconnect socket=${socket.id}`);
   await removeFromAllQueues(socket.id, redis);
 
   for (const [sessionId, session] of localSessions.entries()) {
