@@ -1526,7 +1526,7 @@ export default function AnonKonnectApp({ initialRooms }) {
                 <div className="mt-4 rounded-3xl border border-slate-200/80 bg-white/75 p-4">
                   <div className="flex items-center justify-between text-sm">
                     <p className="text-slate-600">
-                      {queueStatus?.message || `Searching for matches in ${onboarding.country}...`}
+                      {queueStatus?.message || "Finding your best available match..."}
                     </p>
                     <span className="rounded-full bg-white/80 px-3 py-1 text-xs text-slate-600">
                       {queueCountdown}

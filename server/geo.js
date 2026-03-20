@@ -59,18 +59,18 @@ function allowsTier(stage, tier) {
 
 function getStatusLabel(stage, country) {
   if (stage === "state") {
-    return `Searching for matches in ${country || "your country"} (same state)`;
+    return `Finding nearby matches (same state first)`;
   }
 
   if (stage === "country") {
-    return `Searching for matches in ${country || "your country"}`;
+    return `Expanding to country-wide matches`;
   }
 
   if (stage === "region") {
-    return `Expanding search to nearby countries`;
+    return `Expanding to nearby regions`;
   }
 
-  return `Searching globally for the fastest possible match`;
+  return `Searching globally for the fastest match`;
 }
 
 module.exports = {
