@@ -1,9 +1,6 @@
 import bcrypt from "bcryptjs";
 import NextAuth from "next-auth";
-import AppleProvider from "next-auth/providers/apple";
 import GoogleProvider from "next-auth/providers/google";
-import FacebookProvider from "next-auth/providers/facebook";
-import TwitterProvider from "next-auth/providers/twitter";
 import { randomUUID } from "crypto";
 
 import { prisma } from "@/lib/prisma";
@@ -15,31 +12,6 @@ const providers = [
     ? GoogleProvider({
         clientId: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      })
-    : null,
-  process.env.FACEBOOK_CLIENT_ID && process.env.FACEBOOK_CLIENT_SECRET
-    ? FacebookProvider({
-        clientId: process.env.FACEBOOK_CLIENT_ID,
-        clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
-      })
-    : null,
-  process.env.X_CLIENT_ID && process.env.X_CLIENT_SECRET
-    ? TwitterProvider({
-        clientId: process.env.X_CLIENT_ID,
-        clientSecret: process.env.X_CLIENT_SECRET,
-        authorization: {
-          params: {
-            // Helps get email when available.
-            include_email: "true",
-            scope: "profile email",
-          },
-        },
-      })
-    : null,
-  process.env.APPLE_CLIENT_ID && process.env.APPLE_CLIENT_SECRET
-    ? AppleProvider({
-        clientId: process.env.APPLE_CLIENT_ID,
-        clientSecret: process.env.APPLE_CLIENT_SECRET,
       })
     : null,
 ].filter(Boolean);
