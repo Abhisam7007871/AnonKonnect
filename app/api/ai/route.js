@@ -6,7 +6,7 @@ import { generatePersonaReply } from "@/lib/gemini-ai";
 const schema = z.object({
   personaId: z.string(),
   message: z.string().min(1),
-  userGender: z.string().optional().default(""),
+  userGender: z.string().optional().nullable(),
   history: z
     .array(
       z.object({

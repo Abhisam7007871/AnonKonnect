@@ -28,9 +28,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AdSensePlaceholder } from "@/components/adsense-placeholder";
 import { ChatBubble } from "@/components/chat-bubble";
 import { aiPersonas, buildPersonaIntro, getPersonaConfig } from "@/lib/demo-ai";
-import { getSocket, getSocketUrl, resetSocket } from "@/lib/socket-client";
+import { getSocket, resetSocket } from "@/lib/socket-client";
 import { cn, formatRelativeClock, toTitleCase } from "@/lib/utils";
-import { signIn, signOut, useSession } from "next-auth/react";
 
 const tabs = [
   { id: "match", label: "1-on-1 Match", icon: Search },
@@ -111,12 +110,11 @@ function createMessage(payload) {
 export default function AnonKonnectApp({ initialRooms }) {
   const [activeTab, setActiveTab] = useState("match");
   const [session, setSession] = useState(guestSession);
-  const { data: nextAuthSession, status: nextAuthStatus } = useSession();
   const [authMode, setAuthMode] = useState("login");
   const [authForm, setAuthForm] = useState({ email: "", password: "" });
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
-  const [roomActionError, setRoomActionError] = useState("");
+  const [composerActionError, setComposerActionError] = useState("");
   const [isConnected, setIsConnected] = useState(false);
   const [socketId, setSocketId] = useState("");
   const [selectedMode, setSelectedMode] = useState("text");
@@ -177,7 +175,6 @@ export default function AnonKonnectApp({ initialRooms }) {
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const matchSessionRef = useRef({ sessionId: "", peerId: "", mode: "text" });
-  const matchPanelRef = useRef(null);
   const [callError, setCallError] = useState("");
   const [isMicMuted, setIsMicMuted] = useState(false);
   const [isCameraEnabled, setIsCameraEnabled] = useState(true);
@@ -384,34 +381,6 @@ export default function AnonKonnectApp({ initialRooms }) {
     }
   }, []);
 
-  // Bridge NextAuth OAuth into this app's custom socket/JWT flow.
-  useEffect(() => {
-    if (nextAuthStatus !== "authenticated") {
-      return;
-    }
-
-    const token = nextAuthSession?.token;
-    const user = nextAuthSession?.user;
-    if (!token || !user) {
-      return;
-    }
-
-    const nextSession = {
-      accessLevel: "registered",
-      token,
-      user,
-    };
-
-    persistSession(nextSession);
-    setSession(nextSession);
-    setOnboarding((current) => ({
-      ...current,
-      ...toOnboardingFromUser(user),
-    }));
-    setAuthError("");
-    setRoomActionError("");
-  }, [nextAuthStatus, nextAuthSession]);
-
   useEffect(() => {
     async function hydrateProfile() {
       if (!session.token || session.accessLevel !== "registered") {
@@ -523,13 +492,6 @@ export default function AnonKonnectApp({ initialRooms }) {
     socket.on("connect", () => {
       setIsConnected(true);
       socket.emit("list_rooms");
-    });
-    socket.on("connect_error", (error) => {
-      setIsConnected(false);
-      const socketUrl = getSocketUrl();
-      const msg = error?.message || "Unable to connect to server.";
-      setCallError(`${msg} (socketUrl: ${socketUrl})`);
-      setQueueStatus(null);
     });
     socket.on("disconnect", () => setIsConnected(false));
     socket.on("connected", (payload) => setSocketId(payload.userId));
@@ -650,37 +612,28 @@ export default function AnonKonnectApp({ initialRooms }) {
       );
     });
     socket.on("room_error", (payload) => {
-      const message = payload.message || "Room action failed.";
-      setRoomActionError(message);
-      setAuthError(message);
+      setAuthError(payload.message || "Room action failed.");
     });
     socket.on("session:skip", () => {
       resetMatchMedia();
-      setActiveTab("match");
       setMatchState({
         sessionId: "",
         peerId: "",
         peer: null,
-        mode: matchSessionRef.current.mode || selectedMode,
+        mode: "text",
         typing: false,
       });
       setMessages([]);
     });
     socket.on("session:partner_left", () => {
       resetMatchMedia();
-      const mode = matchSessionRef.current.mode || selectedMode;
-      setActiveTab("match");
-      setSelectedMode(mode);
       setMatchState({
         sessionId: "",
         peerId: "",
         peer: null,
-        mode,
+        mode: "text",
         typing: false,
       });
-      setMessages([]);
-      // Partner left without a "skip": we must re-enter the queue so waitlisted users can match.
-      joinMatchmakingQueue(mode);
     });
     socket.on("rooms_snapshot_broadcast", () => {
       socket.emit("list_rooms");
@@ -741,37 +694,13 @@ export default function AnonKonnectApp({ initialRooms }) {
     setIsAuthLoading(true);
     setAuthError("");
 
-    const nickname = String(onboarding.nickname || "").trim();
-    const password = String(authForm.password || "");
-    const email = String(authForm.email || "").trim();
-
-    // Fast client-side guardrails so we don't send empty/invalid payloads.
-    if (!email.includes("@") || email.length < 6) {
-      setIsAuthLoading(false);
-      setAuthError("Please enter a valid email.");
-      return;
-    }
-
-    if (password.length < 6) {
-      setIsAuthLoading(false);
-      setAuthError("Password must be at least 6 characters.");
-      return;
-    }
-
-    if (authMode === "register" && nickname.length < 2) {
-      setIsAuthLoading(false);
-      setAuthError("Nickname must be at least 2 characters.");
-      return;
-    }
-
     const endpoint = authMode === "login" ? "/api/auth/login" : "/api/auth/register";
     const body =
       authMode === "login"
-        ? { ...authForm, email }
+        ? authForm
         : {
             ...authForm,
-            email,
-            nickname,
+            nickname: onboarding.nickname,
             gender: onboarding.gender,
             purpose: onboarding.purpose,
             country: onboarding.country,
@@ -807,11 +736,6 @@ export default function AnonKonnectApp({ initialRooms }) {
   }
 
   function continueAsGuest() {
-    if (nextAuthStatus === "authenticated") {
-      signOut({ redirect: false }).catch(() => {});
-    }
-
-    setAuthMode("guest");
     const nextSession = {
       ...guestSession,
       user: {
@@ -829,101 +753,31 @@ export default function AnonKonnectApp({ initialRooms }) {
   }
 
   function logout() {
-    if (nextAuthStatus === "authenticated") {
-      signOut({ redirect: false }).catch(() => {});
-    }
-
     window.localStorage.removeItem("anonkonnect-session");
     resetMatchMedia();
     setSession(guestSession);
-    setAuthMode("guest");
     setActiveRoom(null);
     setMessages([]);
     setRoomMessages(roomSeedMessages);
   }
 
-  async function joinMatchmakingQueue(modeOverride) {
-    const mode = modeOverride || selectedMode;
-    setCallError("");
-
-    setActiveTab("match");
-    setSelectedMode(mode);
-    setMatchState((current) => ({
-      ...current,
-      sessionId: "",
-      peerId: "",
-      peer: null,
-      mode,
-      typing: false,
-    }));
-    setMessages([]);
-
-    // Optimistic UI so the user immediately sees feedback.
-    setQueueStatus({
-      stage: "state",
-      position: 1,
-      totalInQueue: 1,
-      progressPercent: 0,
-      nextExpansionAt: Date.now() + 60_000,
-      message: "Joining queue...",
-    });
-
-    // Scroll into the match/chat area so the user immediately sees
-    // Text/Audio/Video UI for the selected mode.
-    const scrollAttempts = { current: 0 };
-    const tryScroll = () => {
-      scrollAttempts.current += 1;
-      const el = matchPanelRef.current;
-      if (el?.scrollIntoView) {
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
-        return;
-      }
-      if (scrollAttempts.current < 6) {
-        window.requestAnimationFrame(tryScroll);
-      }
-    };
-    window.requestAnimationFrame(tryScroll);
+  async function joinMatchmakingQueue() {
+    if (!isConnected) {
+      setAuthError("Realtime server is reconnecting. Please wait until Socket status is Live.");
+      return;
+    }
 
     let nextSession = session;
     try {
       nextSession = await syncRegisteredProfile();
     } catch (error) {
       setAuthError(error.message);
-      setQueueStatus(null);
       return;
     }
 
-    const socket = getSocket({
-      token: nextSession.token,
-      user: nextSession.user,
-      accessLevel: nextSession.accessLevel,
-    });
-
-    // Ensure we don't drop `join-queue` during reconnect.
-    if (!socket.connected) {
-      await new Promise((resolve, reject) => {
-        const timeout = window.setTimeout(() => {
-          reject(new Error("Socket connection timed out. Please try again."));
-        }, 8000);
-
-        socket.once("connect", () => {
-          window.clearTimeout(timeout);
-          resolve();
-        });
-
-        socket.connect();
-      }).catch((error) => {
-        setCallError(error.message || "Unable to connect to server.");
-        setQueueStatus(null);
-      });
-    }
-
-    if (!socket.connected) {
-      return;
-    }
-
+    const socket = getSocket();
     socket.emit("join-queue", {
-      mode,
+      mode: selectedMode,
       profile: {
         ...nextSession.user,
         nickname: onboarding.nickname || nextSession.user.nickname || "Guest",
@@ -949,14 +803,23 @@ export default function AnonKonnectApp({ initialRooms }) {
   function handleComposerEnter(event, onSubmit) {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
-      onSubmit(event);
+      onSubmit();
     }
   }
 
   function sendMessage(kind = "text", content = draft) {
-    if (!matchState.sessionId || !content) {
+    if (!matchState.sessionId) {
+      setComposerActionError("Start matching first to send messages, stickers, GIFs, images, or voice notes.");
       return;
     }
+
+    const normalized = typeof content === "string" ? content.trim() : content;
+    if (!normalized) {
+      setComposerActionError(kind === "gif" ? "Paste a GIF URL first." : "Type something to send.");
+      return;
+    }
+
+    setComposerActionError("");
 
     const socket = getSocket();
     const message = createMessage({
@@ -976,9 +839,18 @@ export default function AnonKonnectApp({ initialRooms }) {
   }
 
   function sendRoomMessage(kind = "text", content = roomDraft) {
-    if (!activeRoom?.id || !content) {
+    if (!activeRoom?.id) {
+      setComposerActionError("Join a room first to send messages, stickers, GIFs, images, or voice notes.");
       return;
     }
+
+    const normalized = typeof content === "string" ? content.trim() : content;
+    if (!normalized) {
+      setComposerActionError(kind === "gif" ? "Paste a GIF URL first." : "Type something to send.");
+      return;
+    }
+
+    setComposerActionError("");
 
     const socket = getSocket();
     const message = createMessage({
@@ -1029,36 +901,13 @@ export default function AnonKonnectApp({ initialRooms }) {
   }
 
   async function createRoom() {
-    setRoomActionError("");
     if (!isConnected) {
-      setRoomActionError("Connecting to server... please wait, then try Create Room again.");
+      setAuthError("Realtime server is reconnecting. Please wait until Socket status is Live.");
       return;
     }
 
     if (!isRegistered) {
-      setRoomActionError("Register or log in to create private rooms.");
-      return;
-    }
-
-    const name = String(newRoom.name || "").trim();
-    const description = String(newRoom.description || "").trim();
-    const category = String(newRoom.category || "").trim();
-    const region = String(newRoom.region || "").trim();
-
-    if (name.length < 2) {
-      setRoomActionError("Room name must be at least 2 characters.");
-      return;
-    }
-    if (description.length < 4) {
-      setRoomActionError("Room description must be at least 4 characters.");
-      return;
-    }
-    if (category.length < 2) {
-      setRoomActionError("Room category must be at least 2 characters.");
-      return;
-    }
-    if (region.length < 2) {
-      setRoomActionError("Room region must be at least 2 characters.");
+      setAuthError("Register or log in to create private rooms.");
       return;
     }
 
@@ -1066,7 +915,7 @@ export default function AnonKonnectApp({ initialRooms }) {
     try {
       nextSession = await syncRegisteredProfile();
     } catch (error) {
-      setRoomActionError(error.message);
+      setAuthError(error.message);
       return;
     }
 
@@ -1081,7 +930,7 @@ export default function AnonKonnectApp({ initialRooms }) {
     const payload = await response.json();
 
     if (!response.ok) {
-      setRoomActionError(payload.error || "Unable to create room.");
+      setAuthError(payload.error || "Unable to create room.");
       return;
     }
 
@@ -1104,6 +953,11 @@ export default function AnonKonnectApp({ initialRooms }) {
   }
 
   async function joinRoom(room) {
+    if (!isConnected) {
+      setAuthError("Realtime server is reconnecting. Please wait until Socket status is Live.");
+      return;
+    }
+
     let nextSession = session;
     if (isRegistered) {
       try {
@@ -1130,15 +984,12 @@ export default function AnonKonnectApp({ initialRooms }) {
   }
 
   async function requestPrivateRoom() {
-    setRoomActionError("");
     if (!isConnected) {
-      setRoomActionError("Connecting to server... please wait, then try Request again.");
+      setAuthError("Realtime server is reconnecting. Please wait until Socket status is Live.");
       return;
     }
 
-    const roomKey = String(privateRoomKey || "").trim();
-    if (!roomKey) {
-      setRoomActionError("Paste a private room key (room id) first.");
+    if (!privateRoomKey.trim()) {
       return;
     }
 
@@ -1147,14 +998,14 @@ export default function AnonKonnectApp({ initialRooms }) {
       try {
         nextSession = await syncRegisteredProfile();
       } catch (error) {
-        setRoomActionError(error.message);
+        setAuthError(error.message);
         return;
       }
     }
 
     const socket = getSocket();
     socket.emit("request_join_room", {
-      roomId: roomKey,
+      roomId: privateRoomKey.trim(),
       profile: {
         ...nextSession.user,
         nickname: onboarding.nickname || nextSession.user.nickname || "Guest",
@@ -1165,6 +1016,11 @@ export default function AnonKonnectApp({ initialRooms }) {
   }
 
   function resolveAccessRequest(request, decision) {
+    if (!isConnected) {
+      setAuthError("Realtime server is reconnecting. Please wait until Socket status is Live.");
+      return;
+    }
+
     const socket = getSocket();
     socket.emit("respond_room_request", {
       roomId: request.roomId,
@@ -1187,9 +1043,8 @@ export default function AnonKonnectApp({ initialRooms }) {
     ]);
   }
 
-  async function sendAiPrompt(overrideMessage) {
-    const messageText = typeof overrideMessage === "string" ? overrideMessage : aiDraft;
-    if (!String(messageText || "").trim() || isAiLoading) {
+  async function sendAiPrompt() {
+    if (!aiDraft.trim() || isAiLoading) {
       return;
     }
 
@@ -1197,7 +1052,7 @@ export default function AnonKonnectApp({ initialRooms }) {
       senderId: "me",
       senderName: session.user.nickname || "You",
       kind: "text",
-      content: String(messageText),
+      content: aiDraft,
     });
     const nextMessages = [...aiMessages, prompt];
     setAiMessages(nextMessages);
@@ -1211,7 +1066,7 @@ export default function AnonKonnectApp({ initialRooms }) {
         body: JSON.stringify({
           personaId: aiPersonaId,
           message: prompt.content,
-          userGender: onboarding.gender || session.user?.gender || "",
+          userGender: onboarding.gender,
           history: nextMessages
             .filter((message) => !String(message.id || "").startsWith("ai-intro"))
             .slice(-10)
@@ -1498,75 +1353,42 @@ export default function AnonKonnectApp({ initialRooms }) {
                     Register
                   </button>
                 </div>
-                {authMode !== "guest" ? (
-                  <>
-                    <input
-                      className="w-full rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm outline-none ring-0 placeholder:text-slate-500"
-                      onChange={(event) =>
-                        setAuthForm((current) => ({ ...current, email: event.target.value }))
-                      }
-                      placeholder="Email"
-                      type="email"
-                      value={authForm.email}
-                    />
-                    <input
-                      className="w-full rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm outline-none ring-0 placeholder:text-slate-500"
-                      onChange={(event) =>
-                        setAuthForm((current) => ({ ...current, password: event.target.value }))
-                      }
-                      placeholder="Password"
-                      type="password"
-                      value={authForm.password}
-                    />
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-electric to-violet px-4 py-3 text-sm font-medium text-white"
-                        disabled={isAuthLoading}
-                        type="submit"
-                      >
-                        {authMode === "login" ? <LogIn className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
-                        {isAuthLoading ? "Working..." : authMode === "login" ? "Login" : "Register"}
-                      </button>
-                      <button
-                        className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm"
-                        onClick={continueAsGuest}
-                        type="button"
-                      >
-                        Guest Mode
-                      </button>
-                    </div>
-                    <div className="pt-1">
-                      <p className="text-xs uppercase tracking-[0.32em] text-slate-500">Or continue with</p>
-                      <div className="mt-2 grid gap-2">
-                        <button
-                          className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm text-slate-900 transition hover:bg-white/90"
-                          onClick={() => signIn("google", { callbackUrl: "/" })}
-                          type="button"
-                          disabled={nextAuthStatus === "loading"}
-                        >
-                          Google
-                        </button>
-                        <button
-                          className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm text-slate-900 transition hover:bg-white/90"
-                          onClick={() => signIn("facebook", { callbackUrl: "/" })}
-                          type="button"
-                          disabled={nextAuthStatus === "loading"}
-                        >
-                          Facebook
-                        </button>
-                        <button
-                          className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm text-slate-900 transition hover:bg-white/90"
-                          onClick={() => signIn("twitter", { callbackUrl: "/" })}
-                          type="button"
-                          disabled={nextAuthStatus === "loading"}
-                        >
-                          X (Twitter)
-                        </button>
-                      </div>
-                    </div>
-                    {authError && <p className="text-sm text-rose-300">{authError}</p>}
-                  </>
-                ) : null}
+                <input
+                  className="w-full rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm outline-none ring-0 placeholder:text-slate-500"
+                  onChange={(event) =>
+                    setAuthForm((current) => ({ ...current, email: event.target.value }))
+                  }
+                  placeholder="Email"
+                  type="email"
+                  value={authForm.email}
+                />
+                <input
+                  className="w-full rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm outline-none ring-0 placeholder:text-slate-500"
+                  onChange={(event) =>
+                    setAuthForm((current) => ({ ...current, password: event.target.value }))
+                  }
+                  placeholder="Password"
+                  type="password"
+                  value={authForm.password}
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-electric to-violet px-4 py-3 text-sm font-medium text-white"
+                    disabled={isAuthLoading}
+                    type="submit"
+                  >
+                    {authMode === "login" ? <LogIn className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
+                    {isAuthLoading ? "Working..." : authMode === "login" ? "Login" : "Register"}
+                  </button>
+                  <button
+                    className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm"
+                    onClick={continueAsGuest}
+                    type="button"
+                  >
+                    Guest Mode
+                  </button>
+                </div>
+                {authError && <p className="text-sm text-rose-300">{authError}</p>}
               </form>
             </motion.div>
 
@@ -1713,19 +1535,38 @@ export default function AnonKonnectApp({ initialRooms }) {
                 </div>
 
                 <button
-                  className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-electric to-violet px-4 py-3 font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+                  className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-electric to-violet px-4 py-3 font-medium text-white"
                   onClick={joinMatchmakingQueue}
                   type="button"
-                  disabled={!!queueStatus && !matchState.sessionId}
                 >
                   <Radio className="h-4 w-4" />
-                  {queueStatus && !matchState.sessionId ? "Searching..." : "Search"}
+                  Start Matching
                 </button>
 
                 <div className="mt-4 rounded-3xl border border-slate-200/80 bg-white/75 p-4">
-                  <p className="text-sm text-slate-600">
-                    Click `Search` to start matching in Text, Audio, or Video.
-                  </p>
+                  <div className="flex items-center justify-between text-sm">
+                    <p className="text-slate-600">
+                      {queueStatus?.message || `Searching for matches in ${onboarding.country}...`}
+                    </p>
+                    <span className="rounded-full bg-white/80 px-3 py-1 text-xs text-slate-600">
+                      {queueCountdown}
+                    </span>
+                  </div>
+                  <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/80">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-aqua to-electric"
+                      style={{
+                        width: queueStatus?.progressPercent ? `${queueStatus.progressPercent}%` : "8%",
+                      }}
+                    />
+                  </div>
+                  <div className="mt-4 flex items-center gap-4 text-xs text-slate-500">
+                    <span className="inline-flex items-center gap-2">
+                      <Globe className="h-3.5 w-3.5" />
+                      {queueStatus?.stage ? toTitleCase(queueStatus.stage) : "Country"}
+                    </span>
+                    <span>{queueStatus?.totalInQueue || 0} people in queue</span>
+                  </div>
                 </div>
               </section>
             </div>
@@ -1733,10 +1574,7 @@ export default function AnonKonnectApp({ initialRooms }) {
             <AdSensePlaceholder label="Inline ad unit between discovery modules and active chat." />
 
             {activeTab === "match" && (
-              <section
-                ref={matchPanelRef}
-                className="grid gap-4 xl:grid-cols-[0.88fr_1.12fr]"
-              >
+              <section className="grid gap-4 xl:grid-cols-[0.88fr_1.12fr]">
                 <div className="rounded-[32px] border border-slate-200/80 bg-white/80 p-5 backdrop-blur-xl">
                   <div className="flex items-center justify-between">
                     <div>
@@ -1760,38 +1598,6 @@ export default function AnonKonnectApp({ initialRooms }) {
                       <p className="font-medium text-slate-900">Realtime touches</p>
                       <p className="mt-2">Typing indicators, read receipts, images, GIFs, and voice notes are live.</p>
                     </div>
-
-                    {!matchState.sessionId && (
-                      <div className="rounded-3xl border border-slate-200/80 bg-white/75 p-4">
-                        {queueStatus ? (
-                          <>
-                            <div className="flex items-center justify-between text-sm">
-                              <p className="text-slate-600">{queueStatus.message}</p>
-                              <span className="rounded-full bg-white/80 px-3 py-1 text-xs text-slate-600">
-                                {queueCountdown}
-                              </span>
-                            </div>
-                            <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/80">
-                              <div
-                                className="h-full rounded-full bg-gradient-to-r from-aqua to-electric"
-                                style={{
-                                  width: queueStatus.progressPercent ? `${queueStatus.progressPercent}%` : "8%",
-                                }}
-                              />
-                            </div>
-                            <div className="mt-4 flex items-center gap-4 text-xs text-slate-500">
-                              <span className="inline-flex items-center gap-2">
-                                <Globe className="h-3.5 w-3.5" />
-                                {queueStatus.stage ? toTitleCase(queueStatus.stage) : "Country"}
-                              </span>
-                              <span>{queueStatus.totalInQueue || 0} people in queue</span>
-                            </div>
-                          </>
-                        ) : (
-                          <p className="text-sm text-slate-600">Click Search to find your next match.</p>
-                        )}
-                      </div>
-                    )}
                   </div>
                 </div>
 
@@ -1898,17 +1704,16 @@ export default function AnonKonnectApp({ initialRooms }) {
                     )}
                   </div>
                   <div className="mt-4 space-y-3">
+                    {composerActionError ? (
+                      <p className="text-sm text-rose-600">{composerActionError}</p>
+                    ) : null}
                     <textarea
                       className="min-h-24 w-full rounded-3xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm placeholder:text-slate-500"
                       onChange={(event) => {
                         setDraft(event.target.value);
                         onTypingChat();
                       }}
-                      onKeyDown={(event) =>
-                        handleComposerEnter(event, (e) =>
-                          sendMessage("text", String(e.currentTarget.value || "").trim()),
-                        )
-                      }
+                      onKeyDown={(event) => handleComposerEnter(event, () => sendMessage("text"))}
                       placeholder="Type a message, add emoji, share a GIF, or drop a voice note."
                       value={draft}
                     />
@@ -2090,9 +1895,6 @@ export default function AnonKonnectApp({ initialRooms }) {
                         Create Room
                       </button>
                     </div>
-                    {roomActionError && (
-                      <p className="mt-3 text-sm text-rose-300">{roomActionError}</p>
-                    )}
                     <div className="mt-4 rounded-3xl border border-slate-200/80 bg-white/75 p-4">
                       <p className="text-sm font-medium text-slate-900">Request private room access</p>
                       <p className="mt-1 text-sm text-slate-500">
@@ -2148,6 +1950,9 @@ export default function AnonKonnectApp({ initialRooms }) {
                     </div>
 
                     <div className="mt-4 space-y-3">
+                      {composerActionError ? (
+                        <p className="text-sm text-rose-600">{composerActionError}</p>
+                      ) : null}
                       {activeRoom?.isPrivate && (
                         <div className="rounded-3xl border border-electric/20 bg-electric/10 p-4 text-sm text-slate-200">
                           Private room key: <span className="font-semibold text-slate-900">{activeRoom.id}</span>
@@ -2161,11 +1966,7 @@ export default function AnonKonnectApp({ initialRooms }) {
                             onRoomTyping();
                           }
                         }}
-                        onKeyDown={(event) =>
-                          handleComposerEnter(event, (e) =>
-                            sendRoomMessage("text", String(e.currentTarget.value || "").trim()),
-                          )
-                        }
+                        onKeyDown={(event) => handleComposerEnter(event, () => sendRoomMessage("text"))}
                         placeholder="Message the room, add emoji, or send a sticker..."
                         value={roomDraft}
                       />
@@ -2329,7 +2130,7 @@ export default function AnonKonnectApp({ initialRooms }) {
                     <textarea
                       className="min-h-24 flex-1 rounded-3xl border border-slate-200/80 bg-white/80 px-4 py-3 text-sm"
                       onChange={(event) => setAiDraft(event.target.value)}
-                      onKeyDown={(event) => handleComposerEnter(event, (e) => sendAiPrompt(e.currentTarget.value))}
+                      onKeyDown={(event) => handleComposerEnter(event, sendAiPrompt)}
                       placeholder="Ask for advice, jokes, or a roleplay setup."
                       value={aiDraft}
                     />

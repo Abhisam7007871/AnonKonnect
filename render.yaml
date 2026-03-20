@@ -1,16 +1,24 @@
-# Render Blueprint: Backend (signaling server) as a Web Service
-# Use this when connecting the repo to Render so the backend runs Node.js, not a static site.
-# Dashboard: create new "Web Service", connect this repo; Render can use this spec.
-
 services:
   - type: web
     runtime: node
     name: anonkonnect-server
-    buildCommand: npm install
+    buildCommand: npm install && npm run build
     startCommand: npm start
     healthCheckPath: /health
     envVars:
-      - key: FRONTEND_URL
+      - key: DATABASE_URL
         sync: false
-        # Set in Render Dashboard to: https://anonkonnect.onrender.com (no trailing slash)
-        # Or leave unset to allow all origins
+      - key: REDIS_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.0-flash
+      - key: XAI_API_KEY
+        sync: false
+      - key: XAI_MODEL
+        value: grok-beta
+      - key: NODE_ENV
+        value: production

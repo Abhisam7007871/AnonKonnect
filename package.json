@@ -5,9 +5,9 @@
   "main": "server/server.js",
   "scripts": {
     "dev": "NODE_ENV=development node server/server.js",
-    "build": "prisma generate && next build",
+    "build": "(npx prisma generate || true) && next build",
     "prestart": "npm run build",
-    "start": "NODE_ENV=production node server/server.js",
+    "start": "NODE_ENV=production node server/start.js",
     "prisma:generate": "prisma generate",
     "db:push": "prisma db push",
     "test": "echo \"Error: no test specified\" && exit 1"

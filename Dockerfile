@@ -1,20 +1,37 @@
-# Production Dockerfile for AnonKonnect
-#
-# Render/hosts sometimes run only `npm start`, so we ensure `.next` is generated
-# during the Docker image build (via `npm run build`) before starting the server.
-FROM node:20-slim
+FROM node:20-slim AS builder
+
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Install dependencies first for better caching
 COPY package*.json ./
 RUN npm install
 
-# Copy the whole project (Next.js build needs app/components/lib/prisma/etc.)
 COPY . .
 
-# Generate Prisma client (if needed) and build Next.js to produce `.next`
+RUN npx prisma generate || true
 RUN npm run build
+
+FROM node:20-slim
+
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/server ./server
+COPY --from=builder /app/app ./app
+COPY --from=builder /app/components ./components
+COPY --from=builder /app/lib ./lib
+COPY --from=builder /app/data ./data
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/next.config.mjs ./
+COPY --from=builder /app/tailwind.config.js ./
+COPY --from=builder /app/postcss.config.js ./
+COPY --from=builder /app/jsconfig.json ./
 
 ENV NODE_ENV=production
 ENV PORT=3000
