@@ -1,74 +1,85 @@
-/**
- * SCALABLE SIGNALING HANDLER
- * Verifies session membership with graceful Redis fallback.
- */
-
 function initSignaling(io, socket, localSessions, redis) {
+  async function verifySession(sessionId, socketId) {
+    let session = localSessions.get(sessionId);
 
-    async function verifySession(sessionId, socketId) {
-        // 1. Check local cache first
-        let session = localSessions.get(sessionId);
-
-        // 2. Check Redis if available and not found locally
-        if (!session && redis) {
-            try {
-                const sessionStr = await redis.get(`session:${sessionId}`);
-                if (sessionStr) session = JSON.parse(sessionStr);
-            } catch (err) {
-                console.warn('[SERVER] Redis session lookup failed:', err.message);
-            }
+    if (!session && redis) {
+      try {
+        const sessionStr = await redis.get(`session:${sessionId}`);
+        if (sessionStr) {
+          session = JSON.parse(sessionStr);
         }
-
-        if (session && (session.user1.id === socketId || session.user2.id === socketId)) {
-            return session;
-        }
-        return null;
+      } catch (error) {
+        console.warn("[SERVER] Redis session lookup failed:", error.message);
+      }
     }
 
-    // 1. WebRTC Offer
-    socket.on('offer', async (data) => {
-        const { to, offer, sessionId } = data;
-        const session = await verifySession(sessionId, socket.id);
-        if (session) {
-            io.to(to).emit('offer', { from: socket.id, offer });
-        }
-    });
+    if (session && (session.user1.id === socketId || session.user2.id === socketId)) {
+      return session;
+    }
 
-    // 2. WebRTC Answer
-    socket.on('answer', async (data) => {
-        const { to, answer, sessionId } = data;
-        const session = await verifySession(sessionId, socket.id);
-        if (session) {
-            io.to(to).emit('answer', { from: socket.id, answer });
-        }
-    });
+    return null;
+  }
 
-    // 3. WebRTC ICE Candidates
-    socket.on('ice-candidate', async (data) => {
-        const { to, candidate, sessionId } = data;
-        const session = await verifySession(sessionId, socket.id);
-        if (session) {
-            io.to(to).emit('ice-candidate', { from: socket.id, candidate });
-        }
-    });
+  socket.on("offer", async (data) => {
+    const session = await verifySession(data.sessionId, socket.id);
+    if (session) {
+      io.to(data.to).emit("offer", {
+        from: socket.id,
+        offer: data.offer,
+        sessionId: data.sessionId,
+      });
+    }
+  });
 
-    // 4. Text Chat Messaging
-    socket.on('chat-message', async (data) => {
-        const { to, message, sessionId } = data;
-        const session = await verifySession(sessionId, socket.id);
-        if (session) {
-            io.to(to).emit('chat-message', { from: socket.id, message, timestamp: Date.now() });
-        }
-    });
+  socket.on("answer", async (data) => {
+    const session = await verifySession(data.sessionId, socket.id);
+    if (session) {
+      io.to(data.to).emit("answer", {
+        from: socket.id,
+        answer: data.answer,
+        sessionId: data.sessionId,
+      });
+    }
+  });
 
-    // 5. Typing Indicators
-    socket.on('typing', async (data) => {
-        const { to, isTyping, sessionId } = data;
-        const session = await verifySession(sessionId, socket.id);
-        if (session) {
-            io.to(to).emit('typing', { from: socket.id, isTyping });
-        }
-    });
+  socket.on("ice-candidate", async (data) => {
+    const session = await verifySession(data.sessionId, socket.id);
+    if (session) {
+      io.to(data.to).emit("ice-candidate", {
+        from: socket.id,
+        candidate: data.candidate,
+        sessionId: data.sessionId,
+      });
+    }
+  });
+
+  socket.on("chat-message", async (data) => {
+    const session = await verifySession(data.sessionId, socket.id);
+    if (session) {
+      io.to(data.to).emit("chat-message", {
+        from: socket.id,
+        sessionId: data.sessionId,
+        message: data.message,
+      });
+    }
+  });
+
+  socket.on("typing", async (data) => {
+    const session = await verifySession(data.sessionId, socket.id);
+    if (session) {
+      io.to(data.to).emit("typing", { from: socket.id, isTyping: data.isTyping });
+    }
+  });
+
+  socket.on("message-read", async (data) => {
+    const session = await verifySession(data.sessionId, socket.id);
+    if (session && data.messageId) {
+      io.to(data.to).emit("message-read", {
+        messageId: data.messageId,
+        readAt: Date.now(),
+      });
+    }
+  });
 }
 
 module.exports = { initSignaling };

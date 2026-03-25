@@ -8,6 +8,44 @@ let peerConnection = null;
 let localStream = null;
 let userPreferences = {};
 let messageHistory = [];
+let waitingCountdownInterval = null;
+let lastSeenMessageId = null;
+let isGuestMode = true;
+let activeHubTab = 'match';
+let activeCatalogRoom = null;
+let roomDirectory = [];
+let roomMessagesEl = null;
+let roomMessageInput = null;
+let roomTypingIndicatorEl = null;
+let aiMessagesEl = null;
+let selectedAiPersona = 'general';
+const aiConversation = [];
+const aiPersonaPresets = {
+    general: {
+        name: 'General Assistant',
+        replies: [
+            'I can help keep the conversation going. Ask me for ideas, prompts, or quick advice.',
+            'Try opening with a specific question about hobbies, travel, or what someone is building right now.',
+            'If you want better matches, keep your profile location accurate so country-first routing works well.'
+        ]
+    },
+    joke: {
+        name: 'Joke Bot',
+        replies: [
+            'Why do realtime apps make great friends? They are always in sync.',
+            'I told Socket.IO to slow down. It said, "Sorry, I only know how to emit."',
+            'Premium glassmorphism means your bugs look stylish while you fix them.'
+        ]
+    },
+    roleplay: {
+        name: 'Roleplay AI',
+        replies: [
+            'The neon city hums around us. I am the concierge of AnonKonnect. Who just entered the lounge?',
+            'A private room request blinks on the wall. Do you admit the traveler or keep the door sealed?',
+            'You step into a violet-lit chat hub. Describe your character and I will continue the scene.'
+        ]
+    }
+};
 
 // DOM Elements updated to match new HTML
 let connectionStatusEl, localVideo, remoteVideo, messagesContainer;
@@ -27,6 +65,66 @@ let createdRoomId = null;
 let roomScreenStream = null;
 let isSharingScreen = false;
 
+// Auth state (required)
+let auth0Client = null;
+let authToken = null;
+let authUser = null;
+
+async function initAuth() {
+    const cfg = window.AUTH0_CONFIG || {};
+    if (!cfg.domain || !cfg.clientId) {
+        return false;
+    }
+    if (!window.auth0 || typeof window.auth0.createAuth0Client !== 'function') {
+        return false;
+    }
+    auth0Client = await window.auth0.createAuth0Client({
+        domain: cfg.domain,
+        clientId: cfg.clientId,
+        authorizationParams: {
+            audience: cfg.audience || undefined,
+            redirect_uri: cfg.redirectUri || window.location.origin
+        },
+        cacheLocation: 'localstorage',
+        useRefreshTokens: true
+    });
+
+    // Handle Auth0 redirect
+    const params = new URLSearchParams(window.location.search || '');
+    if (params.get('code') && params.get('state')) {
+        await auth0Client.handleRedirectCallback();
+        window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
+    }
+
+    const isAuthed = await auth0Client.isAuthenticated();
+    if (!isAuthed) return false;
+
+    authUser = await auth0Client.getUser();
+    authToken = await auth0Client.getTokenSilently().catch(() => null);
+    return !!authToken;
+}
+
+// Expose login/logout for buttons (called from HTML)
+window.login = async function login() {
+    if (!auth0Client) await initAuth();
+    if (!auth0Client) {
+        showConnectionToast('Login is not configured yet.');
+        return;
+    }
+    await auth0Client.loginWithRedirect();
+};
+
+window.logout = async function logout() {
+    try {
+        if (socket) socket.disconnect();
+    } catch (e) {}
+    authToken = null;
+    authUser = null;
+    if (auth0Client) {
+        auth0Client.logout({ logoutParams: { returnTo: window.location.origin } });
+    }
+};
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize DOM references
@@ -45,12 +143,33 @@ document.addEventListener('DOMContentLoaded', () => {
     waitingScreen = document.getElementById('waitingScreen');
     chatScreen = document.getElementById('chatScreen');
     mediaContainer = document.getElementById('mediaContainer');
+    roomMessagesEl = document.getElementById('roomMessages');
+    roomMessageInput = document.getElementById('roomMessageInput');
+    roomTypingIndicatorEl = document.getElementById('roomTypingIndicator');
+    aiMessagesEl = document.getElementById('aiMessages');
 
     // Start with Start button disabled until signaling is connected
     const startBtn = document.getElementById('startChatBtn');
     if (startBtn) startBtn.disabled = true;
-    // Connect to signaling server
-    connectToServer();
+
+    renderAiWelcome();
+
+    (async () => {
+        const ok = await initAuth();
+        const loginBtn = document.getElementById('loginBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (ok) {
+            isGuestMode = false;
+            if (loginBtn) loginBtn.classList.add('hidden');
+            if (logoutBtn) logoutBtn.classList.remove('hidden');
+        } else {
+            isGuestMode = true;
+            if (loginBtn) loginBtn.classList.remove('hidden');
+            if (logoutBtn) logoutBtn.classList.add('hidden');
+        }
+        applyGuestExperience();
+        connectToServer();
+    })();
 
     // Deep-link handling: ?mode=text|audio|video → pre-select + scroll to form
     try {
@@ -65,6 +184,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     } catch (e) {
         console.warn('[CLIENT] Failed to apply mode deep-link:', e);
+    }
+
+    // Keep marketing \"Designed for Connection\" video card time in sync with user's local clock
+    try {
+        const timerEls = document.querySelectorAll('.video-timer');
+        if (timerEls.length) {
+            const updateClock = () => {
+                const now = new Date();
+                const hours = now.getHours().toString().padStart(2, '0');
+                const minutes = now.getMinutes().toString().padStart(2, '0');
+                timerEls.forEach(el => el.textContent = `${hours}:${minutes}`);
+            };
+            updateClock();
+            setInterval(updateClock, 60 * 1000);
+        }
+    } catch (e) {
+        console.warn('[CLIENT] Failed to update preview video clock:', e);
     }
 });
 
@@ -110,12 +246,211 @@ function showChatScreen() {
     mainContent.classList.add('hidden');
     waitingScreen.classList.add('hidden');
     chatScreen.classList.remove('hidden');
+    applyGuestExperience();
 }
 
 function hideAllScreens() {
     mainContent.classList.add('hidden');
     waitingScreen.classList.add('hidden');
     chatScreen.classList.add('hidden');
+}
+
+function applyGuestExperience() {
+    const roomOverlay = document.getElementById('roomGuestOverlay');
+    const directOverlay = document.getElementById('directGuestOverlay');
+    if (roomOverlay) roomOverlay.classList.toggle('hidden', !isGuestMode);
+    if (directOverlay) directOverlay.classList.toggle('hidden', !isGuestMode);
+}
+
+function switchHubTab(tabName) {
+    activeHubTab = tabName;
+    document.querySelectorAll('.platform-tab').forEach((tab) => {
+        tab.classList.toggle('active', tab.getAttribute('data-tab') === tabName);
+    });
+    document.getElementById('hubPanelMatch')?.classList.toggle('hidden', tabName !== 'match');
+    document.getElementById('hubPanelRooms')?.classList.toggle('hidden', tabName !== 'rooms');
+    document.getElementById('hubPanelAi')?.classList.toggle('hidden', tabName !== 'ai');
+}
+
+function renderRoomDirectory() {
+    const container = document.getElementById('roomsDirectory');
+    if (!container) return;
+
+    container.innerHTML = '';
+    roomDirectory.forEach((room) => {
+        const card = document.createElement('div');
+        card.className = `room-card ${isGuestMode ? 'room-card-blurred' : ''}`;
+        card.innerHTML = `
+            <div class="room-card-top">
+                <span class="room-badge">${escapeHtml(room.label || room.category || 'Room')}</span>
+                <span class="room-count">${room.memberCount || 0} online</span>
+            </div>
+            <h4>${escapeHtml(room.name || 'Room')}</h4>
+            <p>${escapeHtml(room.description || '')}</p>
+            <button class="btn btn-primary" type="button">Join room</button>
+        `;
+        card.querySelector('button').addEventListener('click', () => joinPublicRoom(room.id));
+        container.appendChild(card);
+    });
+}
+
+function renderActiveRoomHeader(room, members) {
+    const title = document.getElementById('activeRoomTitle');
+    const meta = document.getElementById('activeRoomMeta');
+    if (!room) {
+        if (title) title.textContent = 'No room selected';
+        if (meta) meta.textContent = 'Join a public room or request access to a hidden one.';
+        return;
+    }
+    if (title) title.textContent = isGuestMode ? 'Premium room' : room.name;
+    if (meta) meta.textContent = isGuestMode
+        ? 'Login to reveal room details and member names.'
+        : `${members.length} members online${room.slug ? ` • ${room.slug}` : ''}`;
+}
+
+function renderRoomMessages(messages) {
+    if (!roomMessagesEl) return;
+    roomMessagesEl.innerHTML = '';
+    messages.forEach((message) => appendRoomMessage(message, message.authorId === userId ? 'sent' : 'received'));
+}
+
+function appendRoomSystemMessage(text) {
+    if (!roomMessagesEl) return;
+    const item = document.createElement('div');
+    item.className = 'system-message info';
+    item.textContent = text;
+    roomMessagesEl.appendChild(item);
+    roomMessagesEl.scrollTop = roomMessagesEl.scrollHeight;
+}
+
+function appendRoomMessage(message, direction) {
+    if (!roomMessagesEl) return;
+    const item = document.createElement('div');
+    item.className = `message ${direction}${isGuestMode ? ' blurred-message' : ''}`;
+    item.innerHTML = `
+        <div class="message-author">${escapeHtml(message.authorName || 'Member')}</div>
+        <div class="message-content">${escapeHtml(message.text || '')}</div>
+        <div class="message-time">${new Date(message.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+    `;
+    roomMessagesEl.appendChild(item);
+    roomMessagesEl.scrollTop = roomMessagesEl.scrollHeight;
+}
+
+function setRoomStatus(text) {
+    const status = document.getElementById('roomDirectoryStatus');
+    if (status) status.textContent = text;
+}
+
+function refreshRoomDirectory() {
+    if (socket && socket.connected) socket.emit('rooms:list');
+}
+
+function joinPublicRoom(roomIdToJoin) {
+    if (!socket || !socket.connected) return;
+    if (activeCatalogRoom && activeCatalogRoom.id && activeCatalogRoom.id !== roomIdToJoin) {
+        socket.emit('leave_catalog_room', { roomId: activeCatalogRoom.id });
+    }
+    socket.emit('join_public_room', { roomId: roomIdToJoin, profile: userPreferences });
+}
+
+function createHiddenRoom() {
+    if (isGuestMode) {
+        setRoomStatus('Login to create hidden private rooms.');
+        return;
+    }
+    const name = document.getElementById('hiddenRoomName')?.value || '';
+    const slug = document.getElementById('hiddenRoomSlug')?.value || '';
+    socket.emit('create_hidden_room', {
+        name,
+        slug,
+        profile: userPreferences
+    });
+}
+
+function requestPrivateRoomAccess() {
+    if (isGuestMode) {
+        setRoomStatus('Login to request private room access.');
+        return;
+    }
+    const slug = document.getElementById('privateAccessSlug')?.value || '';
+    socket.emit('request_private_room_access', {
+        slug,
+        profile: userPreferences
+    });
+}
+
+function sendRoomMessage() {
+    if (!socket || !socket.connected || !activeCatalogRoom || !roomMessageInput) return;
+    const text = roomMessageInput.value.trim();
+    if (!text) return;
+    socket.emit('catalog_room_message', {
+        roomId: activeCatalogRoom.id,
+        text
+    });
+    roomMessageInput.value = '';
+}
+
+function handleRoomMessageKeyPress(event) {
+    if (event.key === 'Enter') {
+        sendRoomMessage();
+        return;
+    }
+    if (socket && socket.connected && activeCatalogRoom) {
+        socket.emit('catalog_room_typing', {
+            roomId: activeCatalogRoom.id,
+            isTyping: true
+        });
+        clearTimeout(window.roomTypingTimeout);
+        window.roomTypingTimeout = setTimeout(() => {
+            socket.emit('catalog_room_typing', {
+                roomId: activeCatalogRoom.id,
+                isTyping: false
+            });
+        }, 1200);
+    }
+}
+
+function renderAiWelcome() {
+    if (!aiMessagesEl) return;
+    aiMessagesEl.innerHTML = '';
+    appendAiMessage('assistant', `You are chatting with ${aiPersonaPresets[selectedAiPersona].name}.`);
+}
+
+function appendAiMessage(role, text) {
+    if (!aiMessagesEl) return;
+    const item = document.createElement('div');
+    item.className = `message ${role === 'assistant' ? 'received' : 'sent'}`;
+    item.innerHTML = `<div class="message-content">${escapeHtml(text)}</div>`;
+    aiMessagesEl.appendChild(item);
+    aiMessagesEl.scrollTop = aiMessagesEl.scrollHeight;
+}
+
+function selectAiPersona(persona) {
+    selectedAiPersona = persona;
+    document.querySelectorAll('.ai-persona').forEach((button) => {
+        button.classList.toggle('active', button.getAttribute('data-persona') === persona);
+    });
+    renderAiWelcome();
+}
+
+function sendAiMessage() {
+    const input = document.getElementById('aiMessageInput');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
+    aiConversation.push({ role: 'user', text });
+    appendAiMessage('user', text);
+    input.value = '';
+
+    const preset = aiPersonaPresets[selectedAiPersona];
+    const seed = (text.length + aiConversation.length) % preset.replies.length;
+    window.setTimeout(() => {
+        appendAiMessage('assistant', preset.replies[seed]);
+    }, 400);
+}
+
+function handleAiKeyPress(event) {
+    if (event.key === 'Enter') sendAiMessage();
 }
 
 // Server connection
@@ -147,7 +482,10 @@ function connectToServer() {
         reconnectionAttempts: 15,
         reconnectionDelay: 1000,
         reconnectionDelayMax: 5000,
-        timeout: 45000 // Allow time for Render cold start (~30–60s on free tier)
+        timeout: 45000, // Allow time for Render cold start (~30–60s on free tier)
+        auth: {
+            token: authToken || null
+        }
     });
 
     socket.on('connect', () => {
@@ -156,6 +494,7 @@ function connectToServer() {
         // #endregion
         console.log('[CLIENT] Connected to signaling server');
         updateConnectionStatus(true);
+        socket.emit('rooms:list');
     });
 
     socket.on('connected', (data) => {
@@ -188,6 +527,8 @@ function connectToServer() {
     socket.on('ice-candidate', handleIceCandidate);
     socket.on('chat-message', handleIncomingMessage);
     socket.on('typing', handleTyping);
+    socket.on('queue-update', handleQueueUpdate);
+    socket.on('message-seen', handleMessageSeen);
 
     socket.on('session:skip', (data) => {
         console.log(`[CLIENT] Session skipped. Rejoining queue... ActionUserData: ${data.isSelfAction ? 'Me' : 'Partner'}`);
@@ -243,6 +584,74 @@ function connectToServer() {
             errEl.textContent = data.message || 'Room error';
             errEl.classList.remove('hidden');
         }
+    });
+
+    socket.on('rooms:list', (data) => {
+        roomDirectory = data.publicRooms || [];
+        renderRoomDirectory();
+    });
+
+    socket.on('room:joined', (data) => {
+        activeCatalogRoom = data.room;
+        renderActiveRoomHeader(data.room, data.members || []);
+        renderRoomMessages(data.messages || []);
+        setRoomStatus(`Joined ${data.room.name}.`);
+        switchHubTab('rooms');
+    });
+
+    socket.on('room:left', () => {
+        activeCatalogRoom = null;
+        renderActiveRoomHeader(null, []);
+        renderRoomMessages([]);
+        setRoomStatus('You left the room.');
+    });
+
+    socket.on('room:members', (data) => {
+        if (activeCatalogRoom && data.roomId === activeCatalogRoom.id) {
+            renderActiveRoomHeader(activeCatalogRoom, data.members || []);
+        }
+    });
+
+    socket.on('room:message', (data) => {
+        if (!activeCatalogRoom || data.roomId !== activeCatalogRoom.id) return;
+        appendRoomMessage(data.message, data.message.authorId === userId ? 'sent' : 'received');
+    });
+
+    socket.on('room:system', (data) => {
+        if (!activeCatalogRoom || data.roomId !== activeCatalogRoom.id) return;
+        appendRoomSystemMessage(data.text);
+    });
+
+    socket.on('room:typing', (data) => {
+        if (!activeCatalogRoom || data.roomId !== activeCatalogRoom.id || !roomTypingIndicatorEl) return;
+        roomTypingIndicatorEl.textContent = data.isTyping ? `${data.nickname} is typing...` : '';
+    });
+
+    socket.on('room:error', (data) => {
+        setRoomStatus(data.message || 'Room action failed.');
+    });
+
+    socket.on('room:request-pending', (data) => {
+        setRoomStatus(`Access request sent to ${data.roomName}.`);
+    });
+
+    socket.on('room:request-response', (data) => {
+        setRoomStatus(data.admitted ? `Access granted for ${data.roomName}.` : `Access declined for ${data.roomName}.`);
+    });
+
+    socket.on('room:access-request', (data) => {
+        const requesterName = data.requester?.nickname || 'User';
+        const approve = window.confirm(`User ${requesterName} wants to join ${data.roomName}. Admit?`);
+        socket.emit('respond_private_room_request', {
+            requestId: data.requestId,
+            admit: approve
+        });
+    });
+
+    socket.on('private-room:created', (data) => {
+        const slug = data.room?.slug || 'private room';
+        setRoomStatus(`Hidden room created. Share slug: ${slug}`);
+        socket.emit('rooms:list');
     });
 
     socket.on('participant_joined', (data) => {
@@ -335,7 +744,10 @@ function createPrivateRoomWithMode(mode) {
     userPreferences = {
         nickname: document.getElementById('nickname').value || 'Stranger',
         gender: document.getElementById('gender').value || 'unspecified',
-        purpose: document.getElementById('purpose').value || 'casual'
+        purpose: document.getElementById('purpose').value || 'chat',
+        country: document.getElementById('country').value || '',
+        state: document.getElementById('state').value || '',
+        city: document.getElementById('city').value || ''
     };
     socket.emit('create_private_room', { mode, preferences: userPreferences });
 }
@@ -355,7 +767,10 @@ function joinPrivateRoom() {
     userPreferences = {
         nickname: document.getElementById('nickname').value || 'Stranger',
         gender: document.getElementById('gender').value || 'unspecified',
-        purpose: document.getElementById('purpose').value || 'casual'
+        purpose: document.getElementById('purpose').value || 'chat',
+        country: document.getElementById('country').value || '',
+        state: document.getElementById('state').value || '',
+        city: document.getElementById('city').value || ''
     };
     document.getElementById('privateRoomError').classList.add('hidden');
     socket.emit('join_private_room', { code, preferences: userPreferences });
@@ -791,7 +1206,10 @@ function handleInfoSubmit(event) {
     userPreferences = {
         nickname: document.getElementById('nickname').value || 'Stranger',
         gender: document.getElementById('gender').value || 'unspecified',
-        purpose: document.getElementById('purpose').value || 'casual'
+        purpose: document.getElementById('purpose').value || 'chat',
+        country: document.getElementById('country').value || '',
+        state: document.getElementById('state').value || '',
+        city: document.getElementById('city').value || ''
     };
 
     const mode = document.getElementById('selectedMode').value;
@@ -922,9 +1340,33 @@ function joinQueue() {
 
 // Queue handling
 function handleQueueUpdate(data) {
-    document.getElementById('queuePosition').textContent = data.position;
-    document.getElementById('queueTotal').textContent = data.totalInQueue;
-    document.getElementById('waitingMessage').textContent = data.message;
+    const waitingMessageEl = document.getElementById('waitingMessage');
+    const waitingTextEl = document.getElementById('waitingText');
+    const queueInfoEl = document.getElementById('queueInfo');
+    const searchScopeEl = document.getElementById('searchScope');
+    const searchTimerEl = document.getElementById('searchTimer');
+
+    if (waitingMessageEl) waitingMessageEl.textContent = data.message || 'Searching for your best match...';
+    if (waitingTextEl) waitingTextEl.textContent = `Searching for matches in ${data.country || 'your country'}...`;
+    if (queueInfoEl) queueInfoEl.textContent = `Queue position ${data.position || 1} of ${data.totalInQueue || 1}`;
+    if (searchScopeEl) searchScopeEl.textContent = data.scopeLabel || 'same country';
+
+    if (waitingCountdownInterval) {
+        clearInterval(waitingCountdownInterval);
+        waitingCountdownInterval = null;
+    }
+
+    if (searchTimerEl) {
+        const updateCountdown = () => {
+            const nextMs = Math.max(0, Number(data.nextExpandInMs || 0) - ((Date.now() - startAt)));
+            searchTimerEl.textContent = nextMs > 0 ? `${Math.ceil(nextMs / 1000)}s` : 'live';
+        };
+        const startAt = Date.now();
+        updateCountdown();
+        if ((data.nextExpandInMs || 0) > 0) {
+            waitingCountdownInterval = setInterval(updateCountdown, 1000);
+        }
+    }
 }
 
 // Match found
@@ -933,6 +1375,10 @@ async function handleMatchFound(data) {
 
     currentSessionId = data.sessionId;
     currentPeerId = data.peerId;
+
+    // Start call timer
+    window.__anonCallStartedAt = Date.now();
+    startSessionTimer();
 
     if (peerNameEl) {
         peerNameEl.textContent = data.peerPreferences?.nickname || 'Stranger';
@@ -1003,6 +1449,26 @@ async function handleMatchFound(data) {
     showChatScreen();
 }
 
+let sessionTimerInterval = null;
+
+function startSessionTimer() {
+    clearInterval(sessionTimerInterval);
+    const timerEl = document.getElementById('sessionTimer');
+    if (!timerEl) return;
+    const startedAt = window.__anonCallStartedAt || Date.now();
+    const format = (n) => (n < 10 ? '0' + n : '' + n);
+    sessionTimerInterval = setInterval(() => {
+        const diffMs = Date.now() - startedAt;
+        const totalSec = Math.max(0, Math.floor(diffMs / 1000));
+        const hours = Math.floor(totalSec / 3600);
+        const minutes = Math.floor((totalSec % 3600) / 60);
+        const seconds = totalSec % 60;
+        timerEl.textContent = hours > 0
+            ? `${format(hours)}:${format(minutes)}:${format(seconds)}`
+            : `${format(minutes)}:${format(seconds)}`;
+    }, 1000);
+}
+
 async function initializeWebRTC(data) {
     const configuration = {
         iceServers: data.iceServers.iceServers,
@@ -1014,10 +1480,14 @@ async function initializeWebRTC(data) {
 
     // Add local stream IMMEDIATELY for fastest negotiation
     if (localStream) {
-        localStream.getTracks().forEach(track => {
+        const tracks = localStream.getTracks();
+        console.log('[CLIENT] Attaching local tracks:', tracks.map(t => `${t.kind}:${t.enabled}`));
+        tracks.forEach(track => {
             peerConnection.addTrack(track, localStream);
         });
         console.log('[CLIENT] Local tracks added to peer connection');
+    } else {
+        console.warn('[CLIENT] No localStream present when initializing WebRTC – audio/video may not flow');
     }
 
     // ── Handle incoming tracks: video + audio playback (audio element for reliable remote audio) ──
@@ -1230,7 +1700,11 @@ function toggleChatPanel() {
 
 // Chat functions
 function sendMessage(type = 'text', content = null) {
-    let payload = { type, content };
+    let payload = {
+        id: `msg-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+        type,
+        content
+    };
 
     if (type === 'text') {
         const message = messageInput.value.trim();
@@ -1255,18 +1729,27 @@ function sendMessage(type = 'text', content = null) {
 }
 
 function handleIncomingMessage(data) {
-    // Handle both new payloads and legacy data objects seamlessly
     displayMessage(data.message, 'received');
+    if (data?.message?.id && socket && currentPeerId && currentSessionId) {
+        socket.emit('message-seen', {
+            to: currentPeerId,
+            messageId: data.message.id,
+            sessionId: currentSessionId
+        });
+    }
 }
 
 function displayMessage(payload, type) {
     const messageEl = document.createElement('div');
-    messageEl.className = `message ${type}`;
+    messageEl.className = `message ${type}${isGuestMode ? ' blurred-message' : ''}`;
+    if (payload && typeof payload === 'object' && payload.id) {
+        messageEl.dataset.messageId = payload.id;
+    }
 
     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     let contentHtml = '';
+    let statusHtml = '';
 
-    // Backwards compatibility or direct text
     if (typeof payload === 'string') {
         contentHtml = escapeHtml(payload);
     } else {
@@ -1279,6 +1762,9 @@ function displayMessage(payload, type) {
                 break;
             case 'gif':
                 contentHtml = `<div class="gif-message"><img src="${payload.content}" alt="GIF"></div>`;
+                break;
+            case 'image':
+                contentHtml = `<div class="image-message"><img src="${payload.content}" alt="Shared image"></div>`;
                 break;
             case 'sticker':
                 contentHtml = `<div class="sticker-message"><img src="${payload.content}" alt="Sticker" style="width: 100px;"></div>`;
@@ -1302,13 +1788,38 @@ function displayMessage(payload, type) {
         }
     }
 
+    if (type === 'sent') {
+        statusHtml = `<div class="message-status" data-status-for="${payload.id || ''}">Sent</div>`;
+    }
+
     messageEl.innerHTML = `
         <div class="message-content">${contentHtml}</div>
         <div class="message-time">${time}</div>
+        ${statusHtml}
     `;
 
     messagesContainer.appendChild(messageEl);
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function handleMessageSeen(data) {
+    if (!data?.messageId) return;
+    lastSeenMessageId = data.messageId;
+    const statusEl = document.querySelector(`[data-status-for="${data.messageId}"]`);
+    if (statusEl) {
+        statusEl.textContent = 'Seen';
+    }
+}
+
+function sendImageMessage(event) {
+    const file = event?.target?.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+        sendMessage('image', reader.result);
+    };
+    reader.readAsDataURL(file);
+    event.target.value = '';
 }
 
 function handleMessageKeyPress(event) {
@@ -1341,7 +1852,7 @@ function handleMessageKeyPress(event) {
 
 function handleTyping(data) {
     if (data.isTyping) {
-        typingIndicator.textContent = `${data.from} is typing...`;
+        typingIndicator.textContent = `${peerNameEl?.textContent || 'Stranger'} is typing...`;
     } else {
         typingIndicator.textContent = '';
     }
@@ -1380,6 +1891,11 @@ function exitToHome() {
 
 function fullyCleanupSession() {
     console.log(`[CLIENT] Executing full session cleanup...`);
+
+    if (waitingCountdownInterval) {
+        clearInterval(waitingCountdownInterval);
+        waitingCountdownInterval = null;
+    }
 
     // 1. Stop all media tracks
     if (localStream) {
@@ -1427,6 +1943,7 @@ function fullyCleanupSession() {
 
     currentSessionId = null;
     currentPeerId = null;
+    lastSeenMessageId = null;
 
     isRoomMode = false;
     roomId = null;
@@ -1440,6 +1957,13 @@ function fullyCleanupSession() {
     if (brightnessInterval) {
         clearInterval(brightnessInterval);
         brightnessInterval = null;
+    }
+
+    if (sessionTimerInterval) {
+        clearInterval(sessionTimerInterval);
+        sessionTimerInterval = null;
+        const timerEl = document.getElementById('sessionTimer');
+        if (timerEl) timerEl.textContent = '00:00';
     }
 
     // Hide media container if not in video/audio match anyway
@@ -1647,13 +2171,13 @@ let reconnectInterval = null;
 function showConnectionToast(partnerName) {
     const toast = document.createElement('div');
     toast.className = 'connection-toast';
-    toast.textContent = `Connected to ${partnerName}`;
+    toast.textContent = String(partnerName || 'Updated');
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 4000);
 }
 
 function showReconnectBanner(partnerName) {
-    showConnectionToast(partnerName);
+    showConnectionToast(`Connected to ${partnerName}`);
 
     const banner = document.getElementById('reconnectBanner');
     if (!banner) return;

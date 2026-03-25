@@ -1,0 +1,70 @@
+{
+  "countries": [
+    {
+      "name": "United States",
+      "region": "North America",
+      "states": {
+        "California": ["Los Angeles", "San Francisco", "San Diego"],
+        "New York": ["New York City", "Buffalo", "Albany"],
+        "Texas": ["Austin", "Houston", "Dallas"]
+      }
+    },
+    {
+      "name": "Canada",
+      "region": "North America",
+      "states": {
+        "Ontario": ["Toronto", "Ottawa", "Hamilton"],
+        "British Columbia": ["Vancouver", "Victoria", "Kelowna"]
+      }
+    },
+    {
+      "name": "United Kingdom",
+      "region": "Europe",
+      "states": {
+        "England": ["London", "Manchester", "Birmingham"],
+        "Scotland": ["Edinburgh", "Glasgow", "Aberdeen"]
+      }
+    },
+    {
+      "name": "Germany",
+      "region": "Europe",
+      "states": {
+        "Berlin": ["Berlin"],
+        "Bavaria": ["Munich", "Nuremberg", "Augsburg"]
+      }
+    },
+    {
+      "name": "India",
+      "region": "Asia",
+      "states": {
+        "Maharashtra": ["Mumbai", "Pune", "Nagpur"],
+        "Delhi": ["New Delhi"],
+        "Karnataka": ["Bengaluru", "Mysuru"]
+      }
+    },
+    {
+      "name": "United Arab Emirates",
+      "region": "Middle East",
+      "states": {
+        "Dubai": ["Dubai"],
+        "Abu Dhabi": ["Abu Dhabi"]
+      }
+    },
+    {
+      "name": "Australia",
+      "region": "Oceania",
+      "states": {
+        "New South Wales": ["Sydney", "Newcastle"],
+        "Victoria": ["Melbourne", "Geelong"]
+      }
+    },
+    {
+      "name": "Brazil",
+      "region": "South America",
+      "states": {
+        "Sao Paulo": ["Sao Paulo", "Campinas"],
+        "Rio de Janeiro": ["Rio de Janeiro", "Niteroi"]
+      }
+    }
+  ]
+}
