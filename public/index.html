@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/regular/style.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/fill/style.css">
 
+    <!-- Vercel Web Analytics -->
     <!-- Auth0 SPA SDK (required login) -->
     <script src="https://cdn.auth0.com/js/auth0-spa-js/2.2/auth0-spa-js.production.js"></script>
     <script>
@@ -28,17 +29,9 @@
 
     <!-- Vercel Web Analytics: load ONLY on Vercel; never on Render (avoids 404 + MIME error) -->
     <script>
-        (function () {
-            var h = (window.location.hostname || '').toLowerCase();
-            var isVercel = (h.includes('vercel.app') || h.endsWith('.vercel.app')) && !h.includes('onrender.com');
-            if (isVercel) {
-                var s = document.createElement('script');
-                s.defer = true;
-                s.src = '/_vercel/insights/script.js';
-                document.head.appendChild(s);
-            }
-        })();
+        window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
     </script>
+    <script defer src="/_vercel/insights/script.js"></script>
 </head>
 
 <body>
