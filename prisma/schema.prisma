@@ -1,0 +1,144 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AccessLevel {
+  GUEST
+  REGISTERED
+}
+
+enum RoomMemberRole {
+  OWNER
+  MODERATOR
+  MEMBER
+}
+
+enum RoomMemberStatus {
+  PENDING
+  ACTIVE
+  DECLINED
+  LEFT
+  REMOVED
+}
+
+enum MessageKind {
+  TEXT
+  GIF
+  IMAGE
+  VOICE
+  SYSTEM
+}
+
+model User {
+  id            String        @id @default(cuid())
+  nickname      String
+  email         String        @unique
+  passwordHash  String
+  accessLevel   AccessLevel   @default(REGISTERED)
+  gender        String?
+  purpose       String?
+  country       String?
+  state         String?
+  city          String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  ownedRooms    Room[]        @relation("RoomOwner")
+  memberships   RoomMember[]
+  roomMessages  RoomMessage[]
+
+  @@index([createdAt])
+}
+
+model Room {
+  id             String        @id @default(cuid())
+  slug           String        @unique
+  name           String
+  description    String?
+  category       String
+  region         String
+  isPrivate      Boolean       @default(false)
+  requiresAccess Boolean       @default(false)
+  ownerId        String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  owner          User?         @relation("RoomOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  members        RoomMember[]
+  messages       RoomMessage[]
+  matchTelemetry MatchTelemetry[]
+
+  @@index([isPrivate, createdAt])
+  @@index([region, category])
+}
+
+model RoomMember {
+  id          String           @id @default(cuid())
+  role        RoomMemberRole   @default(MEMBER)
+  status      RoomMemberStatus @default(ACTIVE)
+  requestedAt DateTime         @default(now())
+  joinedAt    DateTime?
+  lastSeenAt  DateTime?
+  roomId      String
+  userId      String
+  room        Room             @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+  @@index([roomId, status])
+  @@index([userId, status])
+}
+
+model RoomMessage {
+  id         String      @id @default(cuid())
+  kind       MessageKind @default(TEXT)
+  content    String      @db.Text
+  senderName String
+  metadata   Json?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  roomId     String
+  senderId   String?
+  room       Room        @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  sender     User?       @relation(fields: [senderId], references: [id], onDelete: SetNull)
+
+  @@index([roomId, createdAt])
+  @@index([senderId])
+}
+
+model MatchTelemetry {
+  id                 String    @id @default(cuid())
+  sessionId          String    @unique
+  mode               String
+  matchTier          String
+  initiatorSocketId  String
+  initiatorUserId    String?
+  initiatorNickname  String?
+  initiatorCountry   String?
+  initiatorState     String?
+  initiatorCity      String?
+  initiatorPurpose   String?
+  initiatorWaitMs    Int?
+  partnerSocketId    String
+  partnerUserId      String?
+  partnerNickname    String?
+  partnerCountry     String?
+  partnerState       String?
+  partnerCity        String?
+  partnerPurpose     String?
+  partnerWaitMs      Int?
+  terminationReason  String?
+  startedAt          DateTime  @default(now())
+  endedAt            DateTime?
+  metadata           Json?
+  roomId             String?
+  room               Room?     @relation(fields: [roomId], references: [id], onDelete: SetNull)
+
+  @@index([mode, matchTier, startedAt])
+  @@index([initiatorUserId])
+  @@index([partnerUserId])
+  @@index([roomId])
+}
