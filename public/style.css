@@ -3097,6 +3097,14 @@ emoji-picker {
     display: flex;
 }
 
+.chat-layout.text-mode #createPrivateRoomToolbarBtn,
+.chat-layout.text-mode #tool-skip-desktop,
+.chat-layout.text-mode #tool-leave-desktop,
+.chat-layout.text-mode #tool-skip-mobile,
+.chat-layout.text-mode #tool-leave-mobile {
+    display: none !important;
+}
+
 .input-area {
     padding-bottom: env(safe-area-inset-bottom, 20px);
 }
