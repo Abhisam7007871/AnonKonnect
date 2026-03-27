@@ -8,47 +8,6 @@ let peerConnection = null;
 let localStream = null;
 let userPreferences = {};
 let messageHistory = [];
-<<<<<<< HEAD
-=======
-let waitingCountdownInterval = null;
-let lastSeenMessageId = null;
-let isGuestMode = true;
-let activeHubTab = 'match';
-let activeCatalogRoom = null;
-let roomDirectory = [];
-let roomMessagesEl = null;
-let roomMessageInput = null;
-let roomTypingIndicatorEl = null;
-let aiMessagesEl = null;
-let selectedAiPersona = 'general';
-const aiConversation = [];
-const aiPersonaPresets = {
-    general: {
-        name: 'General Assistant',
-        replies: [
-            'I can help keep the conversation going. Ask me for ideas, prompts, or quick advice.',
-            'Try opening with a specific question about hobbies, travel, or what someone is building right now.',
-            'If you want better matches, keep your profile location accurate so country-first routing works well.'
-        ]
-    },
-    joke: {
-        name: 'Joke Bot',
-        replies: [
-            'Why do realtime apps make great friends? They are always in sync.',
-            'I told Socket.IO to slow down. It said, "Sorry, I only know how to emit."',
-            'Premium glassmorphism means your bugs look stylish while you fix them.'
-        ]
-    },
-    roleplay: {
-        name: 'Roleplay AI',
-        replies: [
-            'The neon city hums around us. I am the concierge of AnonKonnect. Who just entered the lounge?',
-            'A private room request blinks on the wall. Do you admit the traveler or keep the door sealed?',
-            'You step into a violet-lit chat hub. Describe your character and I will continue the scene.'
-        ]
-    }
-};
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 
 // DOM Elements updated to match new HTML
 let connectionStatusEl, localVideo, remoteVideo, messagesContainer;
@@ -57,7 +16,6 @@ let mainContent, joinFormSection, waitingScreen, chatScreen, mediaContainer;
 
 // State flags
 let isChatOpen = false;
-<<<<<<< HEAD
 let unreadChatCount = 0;
 const sentMessageStatus = new Map();
 const pendingSeenMessageIds = new Set();
@@ -342,8 +300,6 @@ async function generateNoteAiSummary() {
         showConnectionToast(err.message || 'Failed to generate NoteAI notes.');
     }
 }
-=======
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 
 // Private room state
 let isRoomMode = false;
@@ -354,7 +310,6 @@ let pendingInviteCode = null;
 let createdRoomId = null;
 let roomScreenStream = null;
 let isSharingScreen = false;
-<<<<<<< HEAD
 let isPrivacyShieldOn = false;
 let privacyBlackTrack = null;
 const roomScreenSenders = new Map();
@@ -540,68 +495,6 @@ function rebuildRoomSpeakerAnalysers() {
         }
     }, 240);
 }
-=======
-
-// Auth state (required)
-let auth0Client = null;
-let authToken = null;
-let authUser = null;
-
-async function initAuth() {
-    const cfg = window.AUTH0_CONFIG || {};
-    if (!cfg.domain || !cfg.clientId) {
-        return false;
-    }
-    if (!window.auth0 || typeof window.auth0.createAuth0Client !== 'function') {
-        return false;
-    }
-    auth0Client = await window.auth0.createAuth0Client({
-        domain: cfg.domain,
-        clientId: cfg.clientId,
-        authorizationParams: {
-            audience: cfg.audience || undefined,
-            redirect_uri: cfg.redirectUri || window.location.origin
-        },
-        cacheLocation: 'localstorage',
-        useRefreshTokens: true
-    });
-
-    // Handle Auth0 redirect
-    const params = new URLSearchParams(window.location.search || '');
-    if (params.get('code') && params.get('state')) {
-        await auth0Client.handleRedirectCallback();
-        window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
-    }
-
-    const isAuthed = await auth0Client.isAuthenticated();
-    if (!isAuthed) return false;
-
-    authUser = await auth0Client.getUser();
-    authToken = await auth0Client.getTokenSilently().catch(() => null);
-    return !!authToken;
-}
-
-// Expose login/logout for buttons (called from HTML)
-window.login = async function login() {
-    if (!auth0Client) await initAuth();
-    if (!auth0Client) {
-        showConnectionToast('Login is not configured yet.');
-        return;
-    }
-    await auth0Client.loginWithRedirect();
-};
-
-window.logout = async function logout() {
-    try {
-        if (socket) socket.disconnect();
-    } catch (e) {}
-    authToken = null;
-    authUser = null;
-    if (auth0Client) {
-        auth0Client.logout({ logoutParams: { returnTo: window.location.origin } });
-    }
-};
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
@@ -621,41 +514,12 @@ document.addEventListener('DOMContentLoaded', () => {
     waitingScreen = document.getElementById('waitingScreen');
     chatScreen = document.getElementById('chatScreen');
     mediaContainer = document.getElementById('mediaContainer');
-<<<<<<< HEAD
-=======
-    roomMessagesEl = document.getElementById('roomMessages');
-    roomMessageInput = document.getElementById('roomMessageInput');
-    roomTypingIndicatorEl = document.getElementById('roomTypingIndicator');
-    aiMessagesEl = document.getElementById('aiMessages');
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 
     // Start with Start button disabled until signaling is connected
     const startBtn = document.getElementById('startChatBtn');
     if (startBtn) startBtn.disabled = true;
-<<<<<<< HEAD
     // Connect to signaling server
     connectToServer();
-=======
-
-    renderAiWelcome();
-
-    (async () => {
-        const ok = await initAuth();
-        const loginBtn = document.getElementById('loginBtn');
-        const logoutBtn = document.getElementById('logoutBtn');
-        if (ok) {
-            isGuestMode = false;
-            if (loginBtn) loginBtn.classList.add('hidden');
-            if (logoutBtn) logoutBtn.classList.remove('hidden');
-        } else {
-            isGuestMode = true;
-            if (loginBtn) loginBtn.classList.remove('hidden');
-            if (logoutBtn) logoutBtn.classList.add('hidden');
-        }
-        applyGuestExperience();
-        connectToServer();
-    })();
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 
     // Deep-link handling: ?mode=text|audio|video → pre-select + scroll to form
     try {
@@ -688,7 +552,6 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) {
         console.warn('[CLIENT] Failed to update preview video clock:', e);
     }
-<<<<<<< HEAD
 
     // Animate "Users Online Now" with high-volume fluctuation (>= 900)
     initOnlineCountFluctuation();
@@ -865,10 +728,6 @@ async function ensureLocalMediaForMode(mode) {
     }
 }
 
-=======
-});
-
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 // Smooth scrolling for navigation
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function (e) {
@@ -905,7 +764,6 @@ function showWaitingScreen() {
     mainContent.classList.add('hidden');
     chatScreen.classList.add('hidden');
     waitingScreen.classList.remove('hidden');
-<<<<<<< HEAD
     updateWaitingUI('Looking for a stranger...', 'Connecting you to the global network.');
 }
 
@@ -914,18 +772,12 @@ function updateWaitingUI(title, details) {
     const queueInfoEl = document.getElementById('queueInfo');
     if (waitingTitleEl && title) waitingTitleEl.textContent = title;
     if (queueInfoEl && details) queueInfoEl.textContent = details;
-=======
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 }
 
 function showChatScreen() {
     mainContent.classList.add('hidden');
     waitingScreen.classList.add('hidden');
     chatScreen.classList.remove('hidden');
-<<<<<<< HEAD
-=======
-    applyGuestExperience();
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 }
 
 function hideAllScreens() {
@@ -934,207 +786,6 @@ function hideAllScreens() {
     chatScreen.classList.add('hidden');
 }
 
-<<<<<<< HEAD
-=======
-function applyGuestExperience() {
-    const roomOverlay = document.getElementById('roomGuestOverlay');
-    const directOverlay = document.getElementById('directGuestOverlay');
-    if (roomOverlay) roomOverlay.classList.toggle('hidden', !isGuestMode);
-    if (directOverlay) directOverlay.classList.toggle('hidden', !isGuestMode);
-}
-
-function switchHubTab(tabName) {
-    activeHubTab = tabName;
-    document.querySelectorAll('.platform-tab').forEach((tab) => {
-        tab.classList.toggle('active', tab.getAttribute('data-tab') === tabName);
-    });
-    document.getElementById('hubPanelMatch')?.classList.toggle('hidden', tabName !== 'match');
-    document.getElementById('hubPanelRooms')?.classList.toggle('hidden', tabName !== 'rooms');
-    document.getElementById('hubPanelAi')?.classList.toggle('hidden', tabName !== 'ai');
-}
-
-function renderRoomDirectory() {
-    const container = document.getElementById('roomsDirectory');
-    if (!container) return;
-
-    container.innerHTML = '';
-    roomDirectory.forEach((room) => {
-        const card = document.createElement('div');
-        card.className = `room-card ${isGuestMode ? 'room-card-blurred' : ''}`;
-        card.innerHTML = `
-            <div class="room-card-top">
-                <span class="room-badge">${escapeHtml(room.label || room.category || 'Room')}</span>
-                <span class="room-count">${room.memberCount || 0} online</span>
-            </div>
-            <h4>${escapeHtml(room.name || 'Room')}</h4>
-            <p>${escapeHtml(room.description || '')}</p>
-            <button class="btn btn-primary" type="button">Join room</button>
-        `;
-        card.querySelector('button').addEventListener('click', () => joinPublicRoom(room.id));
-        container.appendChild(card);
-    });
-}
-
-function renderActiveRoomHeader(room, members) {
-    const title = document.getElementById('activeRoomTitle');
-    const meta = document.getElementById('activeRoomMeta');
-    if (!room) {
-        if (title) title.textContent = 'No room selected';
-        if (meta) meta.textContent = 'Join a public room or request access to a hidden one.';
-        return;
-    }
-    if (title) title.textContent = isGuestMode ? 'Premium room' : room.name;
-    if (meta) meta.textContent = isGuestMode
-        ? 'Login to reveal room details and member names.'
-        : `${members.length} members online${room.slug ? ` • ${room.slug}` : ''}`;
-}
-
-function renderRoomMessages(messages) {
-    if (!roomMessagesEl) return;
-    roomMessagesEl.innerHTML = '';
-    messages.forEach((message) => appendRoomMessage(message, message.authorId === userId ? 'sent' : 'received'));
-}
-
-function appendRoomSystemMessage(text) {
-    if (!roomMessagesEl) return;
-    const item = document.createElement('div');
-    item.className = 'system-message info';
-    item.textContent = text;
-    roomMessagesEl.appendChild(item);
-    roomMessagesEl.scrollTop = roomMessagesEl.scrollHeight;
-}
-
-function appendRoomMessage(message, direction) {
-    if (!roomMessagesEl) return;
-    const item = document.createElement('div');
-    item.className = `message ${direction}${isGuestMode ? ' blurred-message' : ''}`;
-    item.innerHTML = `
-        <div class="message-author">${escapeHtml(message.authorName || 'Member')}</div>
-        <div class="message-content">${escapeHtml(message.text || '')}</div>
-        <div class="message-time">${new Date(message.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-    `;
-    roomMessagesEl.appendChild(item);
-    roomMessagesEl.scrollTop = roomMessagesEl.scrollHeight;
-}
-
-function setRoomStatus(text) {
-    const status = document.getElementById('roomDirectoryStatus');
-    if (status) status.textContent = text;
-}
-
-function refreshRoomDirectory() {
-    if (socket && socket.connected) socket.emit('rooms:list');
-}
-
-function joinPublicRoom(roomIdToJoin) {
-    if (!socket || !socket.connected) return;
-    if (activeCatalogRoom && activeCatalogRoom.id && activeCatalogRoom.id !== roomIdToJoin) {
-        socket.emit('leave_catalog_room', { roomId: activeCatalogRoom.id });
-    }
-    socket.emit('join_public_room', { roomId: roomIdToJoin, profile: userPreferences });
-}
-
-function createHiddenRoom() {
-    if (isGuestMode) {
-        setRoomStatus('Login to create hidden private rooms.');
-        return;
-    }
-    const name = document.getElementById('hiddenRoomName')?.value || '';
-    const slug = document.getElementById('hiddenRoomSlug')?.value || '';
-    socket.emit('create_hidden_room', {
-        name,
-        slug,
-        profile: userPreferences
-    });
-}
-
-function requestPrivateRoomAccess() {
-    if (isGuestMode) {
-        setRoomStatus('Login to request private room access.');
-        return;
-    }
-    const slug = document.getElementById('privateAccessSlug')?.value || '';
-    socket.emit('request_private_room_access', {
-        slug,
-        profile: userPreferences
-    });
-}
-
-function sendRoomMessage() {
-    if (!socket || !socket.connected || !activeCatalogRoom || !roomMessageInput) return;
-    const text = roomMessageInput.value.trim();
-    if (!text) return;
-    socket.emit('catalog_room_message', {
-        roomId: activeCatalogRoom.id,
-        text
-    });
-    roomMessageInput.value = '';
-}
-
-function handleRoomMessageKeyPress(event) {
-    if (event.key === 'Enter') {
-        sendRoomMessage();
-        return;
-    }
-    if (socket && socket.connected && activeCatalogRoom) {
-        socket.emit('catalog_room_typing', {
-            roomId: activeCatalogRoom.id,
-            isTyping: true
-        });
-        clearTimeout(window.roomTypingTimeout);
-        window.roomTypingTimeout = setTimeout(() => {
-            socket.emit('catalog_room_typing', {
-                roomId: activeCatalogRoom.id,
-                isTyping: false
-            });
-        }, 1200);
-    }
-}
-
-function renderAiWelcome() {
-    if (!aiMessagesEl) return;
-    aiMessagesEl.innerHTML = '';
-    appendAiMessage('assistant', `You are chatting with ${aiPersonaPresets[selectedAiPersona].name}.`);
-}
-
-function appendAiMessage(role, text) {
-    if (!aiMessagesEl) return;
-    const item = document.createElement('div');
-    item.className = `message ${role === 'assistant' ? 'received' : 'sent'}`;
-    item.innerHTML = `<div class="message-content">${escapeHtml(text)}</div>`;
-    aiMessagesEl.appendChild(item);
-    aiMessagesEl.scrollTop = aiMessagesEl.scrollHeight;
-}
-
-function selectAiPersona(persona) {
-    selectedAiPersona = persona;
-    document.querySelectorAll('.ai-persona').forEach((button) => {
-        button.classList.toggle('active', button.getAttribute('data-persona') === persona);
-    });
-    renderAiWelcome();
-}
-
-function sendAiMessage() {
-    const input = document.getElementById('aiMessageInput');
-    if (!input) return;
-    const text = input.value.trim();
-    if (!text) return;
-    aiConversation.push({ role: 'user', text });
-    appendAiMessage('user', text);
-    input.value = '';
-
-    const preset = aiPersonaPresets[selectedAiPersona];
-    const seed = (text.length + aiConversation.length) % preset.replies.length;
-    window.setTimeout(() => {
-        appendAiMessage('assistant', preset.replies[seed]);
-    }, 400);
-}
-
-function handleAiKeyPress(event) {
-    if (event.key === 'Enter') sendAiMessage();
-}
-
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 // Server connection
 function connectToServer() {
     // Safety: Verify Socket.IO client loaded from CDN
@@ -1147,15 +798,9 @@ function connectToServer() {
     // Dynamically determine signaling server URL
     // LOCAL: http://localhost:3000
     // PRODUCTION: Your persistent server URL (Render, Railway, etc.)
-<<<<<<< HEAD
     const explicitSignalingUrl = window.ANONKONNECT_SIGNALING_URL;
     const signalingUrl = explicitSignalingUrl
         || (window.location.protocol === 'file:' ? 'http://localhost:3000' : window.location.origin);
-=======
-    const signalingUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-        ? 'http://localhost:3000'
-        : 'https://anonkonnect.onrender.com'; // Replace with your actual Render URL
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 
     // #region agent log
     const _hostname = window.location.hostname;
@@ -1165,23 +810,12 @@ function connectToServer() {
 
     console.log(`[CLIENT] Connecting to signaling server: ${signalingUrl}`);
     socket = io(signalingUrl, {
-<<<<<<< HEAD
         transports: ['websocket', 'polling'],
-=======
-        transports: ['polling', 'websocket'], // Try polling first (works when WebSocket is blocked e.g. Render/proxy)
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
         reconnection: true,
         reconnectionAttempts: 15,
         reconnectionDelay: 1000,
         reconnectionDelayMax: 5000,
-<<<<<<< HEAD
         timeout: 45000 // Allow time for Render cold start (~30–60s on free tier)
-=======
-        timeout: 45000, // Allow time for Render cold start (~30–60s on free tier)
-        auth: {
-            token: authToken || null
-        }
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     });
 
     socket.on('connect', () => {
@@ -1190,10 +824,6 @@ function connectToServer() {
         // #endregion
         console.log('[CLIENT] Connected to signaling server');
         updateConnectionStatus(true);
-<<<<<<< HEAD
-=======
-        socket.emit('rooms:list');
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     });
 
     socket.on('connected', (data) => {
@@ -1220,16 +850,12 @@ function connectToServer() {
         console.log(`[CLIENT] Match found! Session: ${data.sessionId}`);
         handleMatchFound(data);
     });
-<<<<<<< HEAD
     socket.on('queue-update', handleQueueUpdate);
-=======
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 
     socket.on('offer', handleOffer);
     socket.on('answer', handleAnswer);
     socket.on('ice-candidate', handleIceCandidate);
     socket.on('chat-message', handleIncomingMessage);
-<<<<<<< HEAD
     socket.on('chat-message-delivered', (data) => {
         if (!data?.messageId) return;
         updateSentMessageStatus(data.messageId, 'delivered');
@@ -1242,11 +868,6 @@ function connectToServer() {
     socket.on('chat-message-blocked', (data) => {
         showConnectionToast(data?.message || 'Image blocked by safety policy.');
     });
-=======
-    socket.on('typing', handleTyping);
-    socket.on('queue-update', handleQueueUpdate);
-    socket.on('message-seen', handleMessageSeen);
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 
     socket.on('session:skip', (data) => {
         console.log(`[CLIENT] Session skipped. Rejoining queue... ActionUserData: ${data.isSelfAction ? 'Me' : 'Partner'}`);
@@ -1304,77 +925,6 @@ function connectToServer() {
         }
     });
 
-<<<<<<< HEAD
-=======
-    socket.on('rooms:list', (data) => {
-        roomDirectory = data.publicRooms || [];
-        renderRoomDirectory();
-    });
-
-    socket.on('room:joined', (data) => {
-        activeCatalogRoom = data.room;
-        renderActiveRoomHeader(data.room, data.members || []);
-        renderRoomMessages(data.messages || []);
-        setRoomStatus(`Joined ${data.room.name}.`);
-        switchHubTab('rooms');
-    });
-
-    socket.on('room:left', () => {
-        activeCatalogRoom = null;
-        renderActiveRoomHeader(null, []);
-        renderRoomMessages([]);
-        setRoomStatus('You left the room.');
-    });
-
-    socket.on('room:members', (data) => {
-        if (activeCatalogRoom && data.roomId === activeCatalogRoom.id) {
-            renderActiveRoomHeader(activeCatalogRoom, data.members || []);
-        }
-    });
-
-    socket.on('room:message', (data) => {
-        if (!activeCatalogRoom || data.roomId !== activeCatalogRoom.id) return;
-        appendRoomMessage(data.message, data.message.authorId === userId ? 'sent' : 'received');
-    });
-
-    socket.on('room:system', (data) => {
-        if (!activeCatalogRoom || data.roomId !== activeCatalogRoom.id) return;
-        appendRoomSystemMessage(data.text);
-    });
-
-    socket.on('room:typing', (data) => {
-        if (!activeCatalogRoom || data.roomId !== activeCatalogRoom.id || !roomTypingIndicatorEl) return;
-        roomTypingIndicatorEl.textContent = data.isTyping ? `${data.nickname} is typing...` : '';
-    });
-
-    socket.on('room:error', (data) => {
-        setRoomStatus(data.message || 'Room action failed.');
-    });
-
-    socket.on('room:request-pending', (data) => {
-        setRoomStatus(`Access request sent to ${data.roomName}.`);
-    });
-
-    socket.on('room:request-response', (data) => {
-        setRoomStatus(data.admitted ? `Access granted for ${data.roomName}.` : `Access declined for ${data.roomName}.`);
-    });
-
-    socket.on('room:access-request', (data) => {
-        const requesterName = data.requester?.nickname || 'User';
-        const approve = window.confirm(`User ${requesterName} wants to join ${data.roomName}. Admit?`);
-        socket.emit('respond_private_room_request', {
-            requestId: data.requestId,
-            admit: approve
-        });
-    });
-
-    socket.on('private-room:created', (data) => {
-        const slug = data.room?.slug || 'private room';
-        setRoomStatus(`Hidden room created. Share slug: ${slug}`);
-        socket.emit('rooms:list');
-    });
-
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     socket.on('participant_joined', (data) => {
         const newId = data.socketId;
         if (isRoomMode && roomId) {
@@ -1382,36 +932,26 @@ function connectToServer() {
                 handleRoomNewParticipant(newId, data.preferences || {});
             }
             if (data.participants) roomParticipants = data.participants;
-<<<<<<< HEAD
             renderParticipantsPanel();
             updateRoomChatSizeByParticipants();
             updateRoomIdBadge();
             renderRoomVideoLayout();
-=======
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
             return;
         }
         if (createdRoomId && data.participants) {
             roomId = createdRoomId;
             roomParticipants = data.participants;
             isRoomMode = true;
-<<<<<<< HEAD
             renderParticipantsPanel();
             updateRoomChatSizeByParticipants();
             updateRoomIdBadge();
             renderRoomVideoLayout();
-=======
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
             createdRoomId = null;
             const mode = currentMode;
             (async () => {
                 if (mode === 'video' || mode === 'audio') {
                     try {
-<<<<<<< HEAD
                         const constraints = getMediaConstraints(mode);
-=======
-                        const constraints = { audio: true, video: mode === 'video' };
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
                         localStream = await navigator.mediaDevices.getUserMedia(constraints);
                         if (mode === 'video' && localVideo) {
                             localVideo.srcObject = localStream;
@@ -1437,15 +977,12 @@ function connectToServer() {
                 roomPeerConnections.delete(data.socketId);
             }
             if (data.participants) roomParticipants = data.participants;
-<<<<<<< HEAD
             roomRemoteStreams.delete(data.socketId);
             if (roomActivePeerId === data.socketId) roomActivePeerId = null;
             renderParticipantsPanel();
             updateRoomChatSizeByParticipants();
             renderRoomVideoLayout();
             rebuildRoomSpeakerAnalysers();
-=======
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
         }
     });
 
@@ -1455,25 +992,17 @@ function connectToServer() {
         const msgEl = document.getElementById('privateRoomInviteMessage');
         const codeEl = document.getElementById('privateRoomInviteCode');
         if (modal && msgEl && codeEl) {
-<<<<<<< HEAD
             msgEl.textContent = data.message || 'You both have the same code. You can join this private call anytime using this ID. Max 6 people.';
             codeEl.textContent = data.code || '';
             modal.classList.remove('hidden');
         }
         appendPrivateRoomInviteCard(data);
-=======
-            msgEl.textContent = data.message || 'You both have the same code. You can join this private call anytime using this ID. Max 4 people.';
-            codeEl.textContent = data.code || '';
-            modal.classList.remove('hidden');
-        }
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     });
 
     socket.on('room-offer', handleRoomOffer);
     socket.on('room-answer', handleRoomAnswer);
     socket.on('room-ice-candidate', handleRoomIceCandidate);
     socket.on('room-chat-message', handleRoomChatMessage);
-<<<<<<< HEAD
     socket.on('room-chat-message-delivered', (data) => {
         if (!data?.messageId) return;
         updateSentMessageStatus(data.messageId, 'delivered');
@@ -1482,8 +1011,6 @@ function connectToServer() {
         if (!data?.messageId) return;
         updateSentMessageStatus(data.messageId, 'seen');
     });
-=======
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     socket.on('room-typing', handleRoomTyping);
     socket.on('room_mode_switched', handleRoomModeSwitched);
 }
@@ -1511,14 +1038,7 @@ function createPrivateRoomWithMode(mode) {
     userPreferences = {
         nickname: document.getElementById('nickname').value || 'Stranger',
         gender: document.getElementById('gender').value || 'unspecified',
-<<<<<<< HEAD
         purpose: document.getElementById('purpose').value || 'casual'
-=======
-        purpose: document.getElementById('purpose').value || 'chat',
-        country: document.getElementById('country').value || '',
-        state: document.getElementById('state').value || '',
-        city: document.getElementById('city').value || ''
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     };
     socket.emit('create_private_room', { mode, preferences: userPreferences });
 }
@@ -1530,18 +1050,14 @@ function joinPrivateRoom() {
     }
     const input = document.getElementById('privateRoomCode');
     const code = (input && input.value || '').trim().toUpperCase();
-<<<<<<< HEAD
     const normalizedCode = code.toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '');
     const codePattern = /^[a-z0-9]{2,4}(?:-[a-z0-9]{2,4}){2,3}$/;
 
-=======
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     if (!code) {
         const errEl = document.getElementById('privateRoomError');
         if (errEl) { errEl.textContent = 'Enter a room code'; errEl.classList.remove('hidden'); }
         return;
     }
-<<<<<<< HEAD
     if (!codePattern.test(normalizedCode)) {
         const errEl = document.getElementById('privateRoomError');
         if (errEl) { errEl.textContent = 'Invalid code format. Use grouped code like asd-fewa-sdas'; errEl.classList.remove('hidden'); }
@@ -1550,18 +1066,6 @@ function joinPrivateRoom() {
     userPreferences = getCurrentPreferencesForRoomJoin();
     document.getElementById('privateRoomError').classList.add('hidden');
     socket.emit('join_private_room', { code: normalizedCode, preferences: userPreferences });
-=======
-    userPreferences = {
-        nickname: document.getElementById('nickname').value || 'Stranger',
-        gender: document.getElementById('gender').value || 'unspecified',
-        purpose: document.getElementById('purpose').value || 'chat',
-        country: document.getElementById('country').value || '',
-        state: document.getElementById('state').value || '',
-        city: document.getElementById('city').value || ''
-    };
-    document.getElementById('privateRoomError').classList.add('hidden');
-    socket.emit('join_private_room', { code, preferences: userPreferences });
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 }
 
 function copyRoomCode() {
@@ -1572,7 +1076,6 @@ function copyRoomCode() {
 }
 
 function createPrivateRoomFromCall() {
-<<<<<<< HEAD
     if (!socket || !socket.connected || !currentSessionId) return;
     const payload = {
         mode: currentMode,
@@ -1583,15 +1086,6 @@ function createPrivateRoomFromCall() {
         payload.peerId = currentPeerId;
     }
     socket.emit('create_private_room', payload);
-=======
-    if (!socket || !socket.connected || !currentPeerId || !currentSessionId) return;
-    socket.emit('create_private_room', {
-        mode: currentMode,
-        preferences: userPreferences,
-        fromCall: true,
-        peerId: currentPeerId
-    });
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 }
 
 function copyInviteRoomCode() {
@@ -1610,13 +1104,10 @@ async function handleRoomJoined(data) {
     roomId = data.roomId || data.code;
     roomParticipants = data.participants || [];
     isRoomMode = true;
-<<<<<<< HEAD
     updateRoomIdBadge();
     updatePrivateRoomButtonsVisibility();
     renderParticipantsPanel();
     updateRoomChatSizeByParticipants();
-=======
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     currentMode = data.mode || 'text';
     const others = roomParticipants.filter(p => p.id !== socket.id);
     if (others.length === 0) {
@@ -1626,11 +1117,7 @@ async function handleRoomJoined(data) {
     }
     if (currentMode === 'video' || currentMode === 'audio') {
         try {
-<<<<<<< HEAD
             const constraints = getMediaConstraints(currentMode);
-=======
-            const constraints = { audio: true, video: currentMode === 'video' };
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
             localStream = await navigator.mediaDevices.getUserMedia(constraints);
             if (currentMode === 'video' && localVideo) {
                 localVideo.srcObject = localStream;
@@ -1650,11 +1137,8 @@ async function handleRoomJoined(data) {
 
 async function enterRoomCallView(rId, participants, mode) {
     currentSessionId = rId;
-<<<<<<< HEAD
     updateRoomIdBadge();
     updatePrivateRoomButtonsVisibility();
-=======
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     const chatLayout = document.querySelector('.chat-layout');
     const mediaContainer = document.getElementById('mediaContainer');
     const chatContainer = document.getElementById('chatContainer');
@@ -1665,15 +1149,11 @@ async function enterRoomCallView(rId, participants, mode) {
     if (chatLayout) {
         chatLayout.classList.remove('text-mode', 'audio-mode', 'video-mode');
         chatLayout.classList.add(`${mode}-mode`);
-<<<<<<< HEAD
         chatLayout.classList.toggle('room-mode', !!isRoomMode);
-=======
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     }
     if (mode === 'video' || mode === 'audio') {
         if (mediaContainer) mediaContainer.classList.remove('hidden');
         if (chatLayout) chatLayout.classList.add('has-media');
-<<<<<<< HEAD
         setChatPanelState(false);
         if (sessionTopBar) sessionTopBar.classList.remove('hidden');
         if (sessionTopBarPeerName) sessionTopBarPeerName.textContent = 'Private room (' + participants.length + ')';
@@ -1684,64 +1164,38 @@ async function enterRoomCallView(rId, participants, mode) {
         setChatPanelState(true);
         if (sessionTopBar) sessionTopBar.classList.add('hidden');
         applyAdaptiveChatContrastFromContainer();
-=======
-        if (chatContainer) chatContainer.classList.add('chat-collapsed');
-        isChatOpen = false;
-        if (sessionTopBar) sessionTopBar.classList.remove('hidden');
-        if (sessionTopBarPeerName) sessionTopBarPeerName.textContent = 'Private room (' + participants.length + ')';
-    } else {
-        if (mediaContainer) mediaContainer.classList.add('hidden');
-        if (chatLayout) chatLayout.classList.remove('has-media');
-        if (chatContainer) chatContainer.classList.remove('chat-collapsed');
-        if (sessionTopBar) sessionTopBar.classList.add('hidden');
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     }
     if (isRoomMode && sessionTopBar) sessionTopBar.classList.remove('hidden');
     if (isRoomMode && sessionTopBarPeerName) sessionTopBarPeerName.textContent = 'Private room (' + participants.length + ')';
     if (roomModeSwitchEl) roomModeSwitchEl.classList.toggle('hidden', !isRoomMode);
     if (screenShareBtn) screenShareBtn.style.display = isRoomMode ? '' : 'none';
-<<<<<<< HEAD
     updateNoteAiControlsVisibility();
     renderParticipantsPanel();
     updateRoomChatSizeByParticipants();
     renderRoomVideoLayout();
     rebuildRoomSpeakerAnalysers();
-=======
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     updateRoomModeSwitchActive(mode);
     const toolMic = document.getElementById('tool-mic');
     const toolCam = document.getElementById('tool-cam');
     const toolChat = document.getElementById('tool-chat');
     const toolChatBtn = document.getElementById('chatToggleBtn');
-<<<<<<< HEAD
     const mobileSkip = document.getElementById('tool-skip-mobile');
     const mobileLeave = document.getElementById('tool-leave-mobile');
-=======
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     if (mode === 'text') {
         if (toolMic) toolMic.style.display = 'none';
         if (toolCam) toolCam.style.display = 'none';
         if (toolChat) toolChat.style.display = isRoomMode ? '' : 'none';
         if (toolChatBtn) toolChatBtn.style.display = isRoomMode ? '' : 'none';
-<<<<<<< HEAD
         if (mobileSkip) mobileSkip.style.display = 'none';
         if (mobileLeave) mobileLeave.style.display = 'none';
-=======
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     } else {
         if (toolMic) toolMic.style.display = '';
         if (toolCam) toolCam.style.display = mode === 'video' ? '' : 'none';
         if (toolChat) toolChat.style.display = '';
         if (toolChatBtn) toolChatBtn.style.display = '';
-<<<<<<< HEAD
         if (mobileSkip) mobileSkip.style.display = '';
         if (mobileLeave) mobileLeave.style.display = '';
     }
-=======
-    }
-    const createPrivateBtn = document.getElementById('createPrivateRoomInCallBtn');
-    if (createPrivateBtn) createPrivateBtn.style.display = 'none';
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     showChatScreen();
 }
 
@@ -1771,28 +1225,17 @@ async function handleRoomModeSwitched(data) {
     if (chatLayout) {
         chatLayout.classList.remove('text-mode', 'audio-mode', 'video-mode');
         chatLayout.classList.add(`${mode}-mode`);
-<<<<<<< HEAD
         chatLayout.classList.toggle('room-mode', !!isRoomMode);
-=======
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     }
     if (mode === 'video' || mode === 'audio') {
         if (mediaContainer) mediaContainer.classList.remove('hidden');
         if (chatLayout) chatLayout.classList.add('has-media');
-<<<<<<< HEAD
         setChatPanelState(false);
         if (sessionTopBar) sessionTopBar.classList.remove('hidden');
         if (sessionTopBarPeerName) sessionTopBarPeerName.textContent = 'Private room (' + (roomParticipants.length || 0) + ')';
         if (mode === 'audio') applyAdaptiveChatContrastFromContainer();
         try {
             const constraints = getMediaConstraints(mode);
-=======
-        if (chatContainer) chatContainer.classList.add('chat-collapsed');
-        if (sessionTopBar) sessionTopBar.classList.remove('hidden');
-        if (sessionTopBarPeerName) sessionTopBarPeerName.textContent = 'Private room (' + (roomParticipants.length || 0) + ')';
-        try {
-            const constraints = { audio: true, video: mode === 'video' };
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
             localStream = await navigator.mediaDevices.getUserMedia(constraints);
             if (localStream && mode === 'video' && localVideo) {
                 localVideo.srcObject = localStream;
@@ -1824,14 +1267,9 @@ async function handleRoomModeSwitched(data) {
         if (localVideo && localVideo.srcObject) localVideo.srcObject = null;
         if (mediaContainer) mediaContainer.classList.add('hidden');
         if (chatLayout) chatLayout.classList.remove('has-media');
-<<<<<<< HEAD
         setChatPanelState(true);
         if (sessionTopBar) sessionTopBar.classList.remove('hidden');
         applyAdaptiveChatContrastFromContainer();
-=======
-        if (chatContainer) chatContainer.classList.remove('chat-collapsed');
-        if (sessionTopBar) sessionTopBar.classList.remove('hidden');
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
         roomPeerConnections.forEach((pc) => {
             pc.getSenders().forEach(s => { if (s.track) pc.removeTrack(s); });
         });
@@ -1847,36 +1285,26 @@ async function handleRoomModeSwitched(data) {
     const toolCam = document.getElementById('tool-cam');
     const toolChat = document.getElementById('tool-chat');
     const toolChatBtn = document.getElementById('chatToggleBtn');
-<<<<<<< HEAD
     const mobileSkip = document.getElementById('tool-skip-mobile');
     const mobileLeave = document.getElementById('tool-leave-mobile');
-=======
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     if (mode === 'text') {
         if (toolMic) toolMic.style.display = 'none';
         if (toolCam) toolCam.style.display = 'none';
         if (toolChat) toolChat.style.display = '';
         if (toolChatBtn) toolChatBtn.style.display = '';
-<<<<<<< HEAD
         if (mobileSkip) mobileSkip.style.display = 'none';
         if (mobileLeave) mobileLeave.style.display = 'none';
-=======
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     } else {
         if (toolMic) toolMic.style.display = '';
         if (toolCam) toolCam.style.display = mode === 'video' ? '' : 'none';
         if (toolChat) toolChat.style.display = '';
         if (toolChatBtn) toolChatBtn.style.display = '';
-<<<<<<< HEAD
         if (mobileSkip) mobileSkip.style.display = '';
         if (mobileLeave) mobileLeave.style.display = '';
     }
     renderRoomVideoLayout();
     rebuildRoomSpeakerAnalysers();
     updatePrivateRoomButtonsVisibility();
-=======
-    }
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 }
 
 function applyRoomLayout(mode) {
@@ -1886,7 +1314,6 @@ function applyRoomLayout(mode) {
     if (mode === 'video' || mode === 'audio') {
         if (mediaContainer) mediaContainer.classList.remove('hidden');
         if (chatLayout) chatLayout.classList.add('has-media');
-<<<<<<< HEAD
         setChatPanelState(false);
     }
     renderParticipantsPanel();
@@ -1894,15 +1321,10 @@ function applyRoomLayout(mode) {
     renderRoomVideoLayout();
     rebuildRoomSpeakerAnalysers();
     updateNoteAiControlsVisibility();
-=======
-        if (chatContainer) chatContainer.classList.add('chat-collapsed');
-    }
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 }
 
 const ICE_SERVERS = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }], iceCandidatePoolSize: 10 };
 
-<<<<<<< HEAD
 function handleIncomingRoomTrack(peerSocketId, track, stream) {
     if (!stream) return;
     roomRemoteStreams.set(peerSocketId, {
@@ -1917,8 +1339,6 @@ function handleIncomingRoomTrack(peerSocketId, track, stream) {
     if (overlay) overlay.style.display = roomRemoteStreams.size ? 'none' : 'flex';
 }
 
-=======
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 async function handleRoomNewParticipant(peerSocketId, preferences) {
     if (roomPeerConnections.has(peerSocketId)) return;
     const pc = new RTCPeerConnection(ICE_SERVERS);
@@ -1927,45 +1347,16 @@ async function handleRoomNewParticipant(peerSocketId, preferences) {
         localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
     }
     if (roomScreenStream) {
-<<<<<<< HEAD
         const screenTrack = roomScreenStream.getVideoTracks()[0];
         if (screenTrack) {
             const sender = pc.addTrack(screenTrack, roomScreenStream);
             roomScreenSenders.set(peerSocketId, sender);
         }
-=======
-        roomScreenStream.getTracks().forEach(track => pc.addTrack(track, roomScreenStream));
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     }
     pc.ontrack = (e) => {
         const track = e.track;
         const stream = e.streams[0];
-<<<<<<< HEAD
         handleIncomingRoomTrack(peerSocketId, track, stream);
-=======
-        const isScreen = track.kind === 'video' && track.label && track.label.toLowerCase().includes('screen');
-        if (isScreen && stream) {
-            const remoteScreenEl = document.getElementById('remoteScreen');
-            const container = document.getElementById('remoteScreenContainer');
-            if (remoteScreenEl && container) {
-                remoteScreenEl.srcObject = stream;
-                remoteScreenEl.play().catch(() => {});
-                container.classList.remove('hidden');
-            }
-        } else if (stream) {
-            if (remoteVideo && track.kind === 'video') {
-                remoteVideo.srcObject = stream;
-                remoteVideo.play().catch(() => {});
-            }
-            const remoteAudioEl = document.getElementById('remoteAudio');
-            if (remoteAudioEl && track.kind === 'audio') {
-                remoteAudioEl.srcObject = stream;
-                remoteAudioEl.play().catch(() => {});
-            }
-            const overlay = document.getElementById('remoteMediaState');
-            if (overlay) overlay.style.display = 'none';
-        }
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     };
     pc.onicecandidate = (e) => {
         if (e.candidate) {
@@ -1988,7 +1379,6 @@ async function handleRoomOffer(data) {
         pc = new RTCPeerConnection(ICE_SERVERS);
         roomPeerConnections.set(from, pc);
         if (localStream) localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-<<<<<<< HEAD
         if (roomScreenStream) {
             const screenTrack = roomScreenStream.getVideoTracks()[0];
             if (screenTrack) {
@@ -2000,34 +1390,6 @@ async function handleRoomOffer(data) {
             const track = e.track;
             const stream = e.streams[0];
             handleIncomingRoomTrack(from, track, stream);
-=======
-        if (roomScreenStream) roomScreenStream.getTracks().forEach(track => pc.addTrack(track, roomScreenStream));
-        pc.ontrack = (e) => {
-            const track = e.track;
-            const stream = e.streams[0];
-            const isScreen = track.kind === 'video' && track.label && track.label.toLowerCase().includes('screen');
-            if (isScreen && stream) {
-                const remoteScreenEl = document.getElementById('remoteScreen');
-                const container = document.getElementById('remoteScreenContainer');
-                if (remoteScreenEl && container) {
-                    remoteScreenEl.srcObject = stream;
-                    remoteScreenEl.play().catch(() => {});
-                    container.classList.remove('hidden');
-                }
-            } else if (stream) {
-                if (remoteVideo && track.kind === 'video') {
-                    remoteVideo.srcObject = stream;
-                    remoteVideo.play().catch(() => {});
-                }
-                const remoteAudioEl = document.getElementById('remoteAudio');
-                if (remoteAudioEl && track.kind === 'audio') {
-                    remoteAudioEl.srcObject = stream;
-                    remoteAudioEl.play().catch(() => {});
-                }
-                const overlay = document.getElementById('remoteMediaState');
-                if (overlay) overlay.style.display = 'none';
-            }
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
         };
         pc.onicecandidate = (e) => {
             if (e.candidate) socket.emit('room-ice-candidate', { to: from, candidate: e.candidate, roomId });
@@ -2076,15 +1438,11 @@ async function toggleRoomScreenShare() {
             roomScreenStream = null;
         }
         isSharingScreen = false;
-<<<<<<< HEAD
         isPrivacyShieldOn = false;
-=======
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
         if (btn) {
             btn.innerHTML = '<i class="ph ph-monitor"></i> Share screen';
             btn.classList.remove('danger');
         }
-<<<<<<< HEAD
         updatePrivacyButtonUI(false, false);
         const cameraTrack = localStream ? localStream.getVideoTracks()[0] : null;
         for (const [peerId, pc] of roomPeerConnections) {
@@ -2102,22 +1460,6 @@ async function toggleRoomScreenShare() {
             }
         }
         roomScreenSenders.clear();
-=======
-        roomPeerConnections.forEach((pc, peerId) => {
-            pc.getSenders().forEach(sender => {
-                if (sender.track && sender.track.label && sender.track.label.toLowerCase().includes('screen')) {
-                    pc.removeTrack(sender);
-                }
-            });
-        });
-        for (const [peerId, pc] of roomPeerConnections) {
-            try {
-                const offer = await pc.createOffer();
-                await pc.setLocalDescription(offer);
-                socket.emit('room-offer', { to: peerId, offer: pc.localDescription, roomId });
-            } catch (e) { console.error('Screen share renegotiate error:', e); }
-        }
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
         const container = document.getElementById('remoteScreenContainer');
         if (container) container.classList.add('hidden');
         const remoteScreenEl = document.getElementById('remoteScreen');
@@ -2126,19 +1468,14 @@ async function toggleRoomScreenShare() {
     }
     try {
         roomScreenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-<<<<<<< HEAD
         const screenTrack = roomScreenStream.getVideoTracks()[0];
         if (!screenTrack) throw new Error('No screen track available');
         isSharingScreen = true;
         isPrivacyShieldOn = false;
-=======
-        isSharingScreen = true;
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
         if (btn) {
             btn.innerHTML = '<i class="ph ph-monitor-slash"></i> Stop share';
             btn.classList.add('danger');
         }
-<<<<<<< HEAD
         updatePrivacyButtonUI(true, false);
         showToast('Use "Hide" before opening sensitive apps while sharing.');
         for (const [peerId, pc] of roomPeerConnections) {
@@ -2165,26 +1502,12 @@ async function toggleRoomScreenShare() {
         screenTrack.onended = () => {
             if (isSharingScreen) toggleRoomScreenShare();
         };
-=======
-        roomPeerConnections.forEach((pc) => {
-            roomScreenStream.getTracks().forEach(track => pc.addTrack(track, roomScreenStream));
-        });
-        for (const [peerId, pc] of roomPeerConnections) {
-            try {
-                const offer = await pc.createOffer();
-                await pc.setLocalDescription(offer);
-                socket.emit('room-offer', { to: peerId, offer: pc.localDescription, roomId });
-            } catch (e) { console.error('Screen share offer error:', e); }
-        }
-        roomScreenStream.getTracks()[0].onended = () => toggleRoomScreenShare();
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     } catch (e) {
         console.error('getDisplayMedia error:', e);
         if (btn) btn.innerHTML = '<i class="ph ph-monitor"></i> Share screen';
     }
 }
 
-<<<<<<< HEAD
 async function toggleDirectScreenShare() {
     if (!peerConnection) return;
     const btn = document.getElementById('toggleScreenShareBtn');
@@ -2333,25 +1656,18 @@ function handleRoomChatMessage(data) {
     }
     displayMessage(data.message, 'received', { senderName: getRoomParticipantNameById(data?.from) });
     markMessageSeen(data?.message?.messageId);
-=======
-function handleRoomChatMessage(data) {
-    displayMessage(data.message, 'received');
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 }
 
 function handleRoomTyping(data) {
     if (typingIndicator) {
         typingIndicator.textContent = data.isTyping ? 'Someone is typing...' : '';
     }
-<<<<<<< HEAD
     if (data.isTyping) {
         showIncomingTypingMessage('Typing...');
     } else {
         clearIncomingTypingMessage();
     }
     showTypingPopup(data.isTyping ? 'Typing...' : 'Stopped typing');
-=======
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 }
 
 function updateConnectionStatus(connected, disconnectMessage) {
@@ -2375,14 +1691,7 @@ function handleInfoSubmit(event) {
     userPreferences = {
         nickname: document.getElementById('nickname').value || 'Stranger',
         gender: document.getElementById('gender').value || 'unspecified',
-<<<<<<< HEAD
         purpose: document.getElementById('purpose').value || 'casual'
-=======
-        purpose: document.getElementById('purpose').value || 'chat',
-        country: document.getElementById('country').value || '',
-        state: document.getElementById('state').value || '',
-        city: document.getElementById('city').value || ''
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     };
 
     const mode = document.getElementById('selectedMode').value;
@@ -2430,7 +1739,6 @@ function selectMode(mode, element) {
 
 async function requestMediaPermissions(mode) {
     try {
-<<<<<<< HEAD
         const constraints = getMediaConstraints(mode);
 
         localStream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -2439,15 +1747,6 @@ async function requestMediaPermissions(mode) {
             const v = localStream.getVideoTracks()[0];
             if (v) v.contentHint = 'detail';
         }
-=======
-        const constraints = {
-            audio: true,
-            video: mode === 'video'
-        };
-
-        localStream = await navigator.mediaDevices.getUserMedia(constraints);
-        console.log(`[CLIENT] Media permissions granted. Mode: ${mode}`);
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 
         if (mode === 'video' && localVideo) {
             localVideo.srcObject = localStream;
@@ -2466,10 +1765,7 @@ async function requestMediaPermissions(mode) {
 }
 
 let brightnessInterval = null;
-<<<<<<< HEAD
 let chatContrastInterval = null;
-=======
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 
 function applyAutoBrightness(videoElement) {
     if (brightnessInterval) clearInterval(brightnessInterval);
@@ -2517,7 +1813,6 @@ function applyAutoBrightness(videoElement) {
     }, 2000);
 }
 
-<<<<<<< HEAD
 function initAdaptiveChatContrast(videoElement) {
     if (chatContrastInterval) {
         clearInterval(chatContrastInterval);
@@ -2587,8 +1882,6 @@ function applyAdaptiveChatContrastFromContainer() {
     document.documentElement.style.setProperty('--chat-sent-bg-alpha', luminance > 145 ? '0.58' : '0.70');
 }
 
-=======
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 function joinQueue() {
     socket.emit('join-queue', {
         mode: currentMode,
@@ -2600,39 +1893,9 @@ function joinQueue() {
 
 // Queue handling
 function handleQueueUpdate(data) {
-<<<<<<< HEAD
     const message = data?.message || 'Waiting for a partner...';
     const details = `Queue: #${data?.position || '-'} of ${data?.totalInQueue || '-'}`;
     updateWaitingUI(message, details);
-=======
-    const waitingMessageEl = document.getElementById('waitingMessage');
-    const waitingTextEl = document.getElementById('waitingText');
-    const queueInfoEl = document.getElementById('queueInfo');
-    const searchScopeEl = document.getElementById('searchScope');
-    const searchTimerEl = document.getElementById('searchTimer');
-
-    if (waitingMessageEl) waitingMessageEl.textContent = data.message || 'Searching for your best match...';
-    if (waitingTextEl) waitingTextEl.textContent = `Searching for matches in ${data.country || 'your country'}...`;
-    if (queueInfoEl) queueInfoEl.textContent = `Queue position ${data.position || 1} of ${data.totalInQueue || 1}`;
-    if (searchScopeEl) searchScopeEl.textContent = data.scopeLabel || 'same country';
-
-    if (waitingCountdownInterval) {
-        clearInterval(waitingCountdownInterval);
-        waitingCountdownInterval = null;
-    }
-
-    if (searchTimerEl) {
-        const updateCountdown = () => {
-            const nextMs = Math.max(0, Number(data.nextExpandInMs || 0) - ((Date.now() - startAt)));
-            searchTimerEl.textContent = nextMs > 0 ? `${Math.ceil(nextMs / 1000)}s` : 'live';
-        };
-        const startAt = Date.now();
-        updateCountdown();
-        if ((data.nextExpandInMs || 0) > 0) {
-            waitingCountdownInterval = setInterval(updateCountdown, 1000);
-        }
-    }
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 }
 
 // Match found
@@ -2641,11 +1904,8 @@ async function handleMatchFound(data) {
 
     currentSessionId = data.sessionId;
     currentPeerId = data.peerId;
-<<<<<<< HEAD
     updateRoomIdBadge();
     updatePrivateRoomButtonsVisibility();
-=======
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 
     // Start call timer
     window.__anonCallStartedAt = Date.now();
@@ -2654,7 +1914,6 @@ async function handleMatchFound(data) {
     if (peerNameEl) {
         peerNameEl.textContent = data.peerPreferences?.nickname || 'Stranger';
     }
-<<<<<<< HEAD
     const remoteLabel = document.getElementById('remoteLabel');
     if (remoteLabel) {
         remoteLabel.textContent = data.peerPreferences?.nickname || 'Stranger';
@@ -2670,8 +1929,6 @@ async function handleMatchFound(data) {
         showMainContent();
         return;
     }
-=======
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 
     // Initialize WebRTC connection
     await initializeWebRTC(data);
@@ -2693,25 +1950,16 @@ async function handleMatchFound(data) {
     if (data.mode === 'video' || data.mode === 'audio') {
         mediaContainer.classList.remove('hidden');
         chatLayout.classList.add('has-media');
-<<<<<<< HEAD
         setChatPanelState(false);
-=======
-        chatContainer.classList.add('chat-collapsed');
-        isChatOpen = false;
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
         if (sessionTopBar) sessionTopBar.classList.remove('hidden');
         if (sessionTopBarPeerName) sessionTopBarPeerName.textContent = data.peerPreferences?.nickname || 'Stranger';
 
         if (data.mode === 'audio') {
             document.querySelectorAll('.video-wrapper').forEach(el => el.style.background = '#2d3748');
-<<<<<<< HEAD
             applyAdaptiveChatContrastFromContainer();
         }
         const screenShareBtn = document.getElementById('toggleScreenShareBtn');
         if (screenShareBtn) screenShareBtn.style.display = '';
-=======
-        }
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 
         // Reset overlay for new session
         const overlay = document.getElementById('remoteMediaState');
@@ -2722,16 +1970,11 @@ async function handleMatchFound(data) {
     } else {
         mediaContainer.classList.add('hidden');
         chatLayout.classList.remove('has-media');
-<<<<<<< HEAD
         setChatPanelState(true);
         if (sessionTopBar) sessionTopBar.classList.add('hidden');
         const screenShareBtn = document.getElementById('toggleScreenShareBtn');
         if (screenShareBtn) screenShareBtn.style.display = 'none';
         applyAdaptiveChatContrastFromContainer();
-=======
-        chatContainer.classList.remove('chat-collapsed');
-        if (sessionTopBar) sessionTopBar.classList.add('hidden');
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     }
 
     // ISSUE 3 FIX: Show/hide toolbar buttons based on mode
@@ -2739,11 +1982,8 @@ async function handleMatchFound(data) {
     const toolCam = document.getElementById('tool-cam');
     const toolChat = document.getElementById('tool-chat');
     const chatToggleBtn = document.getElementById('chatToggleBtn');
-<<<<<<< HEAD
     const mobileSkip = document.getElementById('tool-skip-mobile');
     const mobileLeave = document.getElementById('tool-leave-mobile');
-=======
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 
     if (data.mode === 'text') {
         // Text mode: hide media controls
@@ -2751,19 +1991,15 @@ async function handleMatchFound(data) {
         if (toolCam) toolCam.style.display = 'none';
         if (toolChat) toolChat.style.display = 'none';
         if (chatToggleBtn) chatToggleBtn.style.display = 'none';
-<<<<<<< HEAD
         if (mobileSkip) mobileSkip.style.display = 'none';
         if (mobileLeave) mobileLeave.style.display = 'none';
         updatePrivacyButtonUI(false, false);
-=======
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     } else {
         // Audio/Video mode: show all controls
         if (toolMic) toolMic.style.display = '';
         if (toolCam) toolCam.style.display = data.mode === 'video' ? '' : 'none';
         if (toolChat) toolChat.style.display = '';
         if (chatToggleBtn) chatToggleBtn.style.display = '';
-<<<<<<< HEAD
         if (mobileSkip) mobileSkip.style.display = '';
         if (mobileLeave) mobileLeave.style.display = '';
         updatePrivacyButtonUI(isSharingScreen, isPrivacyShieldOn);
@@ -2776,11 +2012,6 @@ async function handleMatchFound(data) {
     } else {
         stopSpeakerWatch();
     }
-=======
-    }
-
-    showChatScreen();
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 }
 
 let sessionTimerInterval = null;
@@ -2820,10 +2051,7 @@ async function initializeWebRTC(data) {
             peerConnection.addTrack(track, localStream);
         });
         console.log('[CLIENT] Local tracks added to peer connection');
-<<<<<<< HEAD
         tuneSenderQuality(peerConnection);
-=======
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     } else {
         console.warn('[CLIENT] No localStream present when initializing WebRTC – audio/video may not flow');
     }
@@ -2836,22 +2064,16 @@ async function initializeWebRTC(data) {
         if (remoteVideo) {
             remoteVideo.srcObject = stream;
             remoteVideo.play().catch(() => {});
-<<<<<<< HEAD
             initAdaptiveChatContrast(remoteVideo);
-=======
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
         }
         const remoteAudioEl = document.getElementById('remoteAudio');
         if (remoteAudioEl) {
             remoteAudioEl.srcObject = stream;
             remoteAudioEl.play().catch(() => {});
         }
-<<<<<<< HEAD
         if (currentMode === 'audio') {
             setTimeout(startSpeakerWatch, 120);
         }
-=======
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
         const overlay = document.getElementById('remoteMediaState');
         if (overlay) {
             overlay.style.display = 'none';
@@ -2988,7 +2210,6 @@ async function handleIceCandidate(data) {
     await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
 }
 
-<<<<<<< HEAD
 function tuneSenderQuality(pc) {
     if (!pc) return;
     pc.getSenders().forEach((sender) => {
@@ -3006,8 +2227,6 @@ function tuneSenderQuality(pc) {
     });
 }
 
-=======
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 // Media controls
 function toggleVideo() {
     if (localStream) {
@@ -3056,7 +2275,6 @@ function toggleFullscreen() {
     }
 }
 
-<<<<<<< HEAD
 function setChatPanelState(open) {
     isChatOpen = !!open;
     const chatContainer = document.getElementById('chatContainer');
@@ -3076,31 +2294,13 @@ function setChatPanelState(open) {
 
 function toggleChatPanel() {
     setChatPanelState(!isChatOpen);
-=======
-function toggleChatPanel() {
-    isChatOpen = !isChatOpen;
-    const chatContainer = document.getElementById('chatContainer');
-    if (isChatOpen) {
-        chatContainer.classList.remove('chat-collapsed');
-    } else {
-        chatContainer.classList.add('chat-collapsed');
-    }
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 }
 
 // Chat functions
 function sendMessage(type = 'text', content = null) {
-<<<<<<< HEAD
     closeMediaToolsMenu();
     closeAllPickers();
     let payload = { type, content, messageId: createMessageId() };
-=======
-    let payload = {
-        id: `msg-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
-        type,
-        content
-    };
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 
     if (type === 'text') {
         const message = messageInput.value.trim();
@@ -3110,11 +2310,7 @@ function sendMessage(type = 'text', content = null) {
     }
 
     // Display own message locally
-<<<<<<< HEAD
     displayMessage(payload, 'sent', { status: 'sent' });
-=======
-    displayMessage(payload, 'sent');
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     console.log(`[CLIENT] Sending message: ${type}`);
 
     if (isRoomMode && roomId) {
@@ -3128,7 +2324,6 @@ function sendMessage(type = 'text', content = null) {
     }
 }
 
-<<<<<<< HEAD
 function triggerImageUpload() {
     closeMediaToolsMenu();
     closeAllPickers();
@@ -3342,30 +2537,6 @@ function displayMessage(payload, type, meta = {}) {
     let contentHtml = '';
 
     // Backwards compatibility or direct text
-=======
-function handleIncomingMessage(data) {
-    displayMessage(data.message, 'received');
-    if (data?.message?.id && socket && currentPeerId && currentSessionId) {
-        socket.emit('message-seen', {
-            to: currentPeerId,
-            messageId: data.message.id,
-            sessionId: currentSessionId
-        });
-    }
-}
-
-function displayMessage(payload, type) {
-    const messageEl = document.createElement('div');
-    messageEl.className = `message ${type}${isGuestMode ? ' blurred-message' : ''}`;
-    if (payload && typeof payload === 'object' && payload.id) {
-        messageEl.dataset.messageId = payload.id;
-    }
-
-    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    let contentHtml = '';
-    let statusHtml = '';
-
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     if (typeof payload === 'string') {
         contentHtml = escapeHtml(payload);
     } else {
@@ -3380,11 +2551,7 @@ function displayMessage(payload, type) {
                 contentHtml = `<div class="gif-message"><img src="${payload.content}" alt="GIF"></div>`;
                 break;
             case 'image':
-<<<<<<< HEAD
                 contentHtml = `<div class="image-message"><img src="${payload.content}" alt="Image"></div>`;
-=======
-                contentHtml = `<div class="image-message"><img src="${payload.content}" alt="Shared image"></div>`;
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
                 break;
             case 'sticker':
                 contentHtml = `<div class="sticker-message"><img src="${payload.content}" alt="Sticker" style="width: 100px;"></div>`;
@@ -3408,7 +2575,6 @@ function displayMessage(payload, type) {
         }
     }
 
-<<<<<<< HEAD
     const statusHtml = type === 'sent'
         ? `<div class="message-status status-sent">✓</div>`
         : '';
@@ -3418,21 +2584,11 @@ function displayMessage(payload, type) {
     messageEl.innerHTML = `
         ${senderHtml}
         <div class="message-content">${contentHtml}</div>
-=======
-    if (type === 'sent') {
-        statusHtml = `<div class="message-status" data-status-for="${payload.id || ''}">Sent</div>`;
-    }
-
-    messageEl.innerHTML = `
-        <div class="message-content">${contentHtml}</div>
-        <div class="message-time">${time}</div>
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
         ${statusHtml}
     `;
 
     messagesContainer.appendChild(messageEl);
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
-<<<<<<< HEAD
     if (type === 'sent' && payload?.messageId) {
         const statusEl = messageEl.querySelector('.message-status');
         if (statusEl) {
@@ -3441,30 +2597,6 @@ function displayMessage(payload, type) {
     }
 }
 
-=======
-}
-
-function handleMessageSeen(data) {
-    if (!data?.messageId) return;
-    lastSeenMessageId = data.messageId;
-    const statusEl = document.querySelector(`[data-status-for="${data.messageId}"]`);
-    if (statusEl) {
-        statusEl.textContent = 'Seen';
-    }
-}
-
-function sendImageMessage(event) {
-    const file = event?.target?.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-        sendMessage('image', reader.result);
-    };
-    reader.readAsDataURL(file);
-    event.target.value = '';
-}
-
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 function handleMessageKeyPress(event) {
     if (event.key === 'Enter') {
         sendMessage();
@@ -3495,7 +2627,6 @@ function handleMessageKeyPress(event) {
 
 function handleTyping(data) {
     if (data.isTyping) {
-<<<<<<< HEAD
         typingIndicator.textContent = `${data.from} is typing...`;
         showIncomingTypingMessage('Typing...');
     } else {
@@ -3517,12 +2648,6 @@ function showTypingPopup(text) {
     typingPopupTimeout = setTimeout(() => {
         popup.classList.add('hidden');
     }, 1400);
-=======
-        typingIndicator.textContent = `${peerNameEl?.textContent || 'Stranger'} is typing...`;
-    } else {
-        typingIndicator.textContent = '';
-    }
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 }
 
 // Session management
@@ -3559,14 +2684,6 @@ function exitToHome() {
 function fullyCleanupSession() {
     console.log(`[CLIENT] Executing full session cleanup...`);
 
-<<<<<<< HEAD
-=======
-    if (waitingCountdownInterval) {
-        clearInterval(waitingCountdownInterval);
-        waitingCountdownInterval = null;
-    }
-
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     // 1. Stop all media tracks
     if (localStream) {
         localStream.getTracks().forEach(track => {
@@ -3580,14 +2697,11 @@ function fullyCleanupSession() {
         roomScreenStream = null;
     }
     isSharingScreen = false;
-<<<<<<< HEAD
     isPrivacyShieldOn = false;
     if (privacyBlackTrack && privacyBlackTrack.readyState !== 'ended') {
         privacyBlackTrack.stop();
     }
     privacyBlackTrack = null;
-=======
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     const remoteScreenContainer = document.getElementById('remoteScreenContainer');
     if (remoteScreenContainer) remoteScreenContainer.classList.add('hidden');
     const remoteScreenEl = document.getElementById('remoteScreen');
@@ -3612,7 +2726,6 @@ function fullyCleanupSession() {
         screenShareBtn.innerHTML = '<i class="ph ph-monitor"></i> Share screen';
         screenShareBtn.classList.remove('danger');
     }
-<<<<<<< HEAD
     updatePrivacyButtonUI(false, false);
     closeMediaToolsMenu();
     const mobileSkip = document.getElementById('tool-skip-mobile');
@@ -3650,24 +2763,6 @@ function fullyCleanupSession() {
     roomPeerConnections.clear();
     roomScreenSenders.clear();
     updateNoteAiControlsVisibility();
-=======
-
-    const sessionTopBar = document.getElementById('sessionTopBar');
-    if (sessionTopBar) sessionTopBar.classList.add('hidden');
-
-    messagesContainer.innerHTML = '<div class="system-message info">You are now chatting with a random stranger. Say hi!</div>';
-    typingIndicator.textContent = '';
-
-    currentSessionId = null;
-    currentPeerId = null;
-    lastSeenMessageId = null;
-
-    isRoomMode = false;
-    roomId = null;
-    roomParticipants = [];
-    roomPeerConnections.forEach(pc => { try { pc.close(); } catch (e) {} });
-    roomPeerConnections.clear();
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     createdRoomId = null;
     const privateRoomCreated = document.getElementById('privateRoomCreated');
     if (privateRoomCreated) privateRoomCreated.classList.add('hidden');
@@ -3677,7 +2772,6 @@ function fullyCleanupSession() {
         brightnessInterval = null;
     }
 
-<<<<<<< HEAD
     if (chatContrastInterval) {
         clearInterval(chatContrastInterval);
         chatContrastInterval = null;
@@ -3687,8 +2781,6 @@ function fullyCleanupSession() {
     document.documentElement.style.setProperty('--chat-sent-bg-alpha', '0.60');
     document.documentElement.style.setProperty('--chat-text-color', '#ffffff');
 
-=======
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     if (sessionTimerInterval) {
         clearInterval(sessionTimerInterval);
         sessionTimerInterval = null;
@@ -3698,7 +2790,6 @@ function fullyCleanupSession() {
 
     // Hide media container if not in video/audio match anyway
     document.getElementById('mediaContainer').classList.add('hidden');
-<<<<<<< HEAD
     const chatLayout = document.querySelector('.chat-layout');
     if (chatLayout) {
         chatLayout.classList.remove('room-mode');
@@ -3708,8 +2799,6 @@ function fullyCleanupSession() {
     updateRoomIdBadge();
     updatePrivateRoomButtonsVisibility();
     renderRoomVideoLayout();
-=======
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 
     // Reset toolbar buttons
     const micBtn = document.getElementById('tool-mic');
@@ -3739,7 +2828,6 @@ function escapeHtml(unsafe) {
 // RICH CHAT FEATURES
 // ==========================================
 
-<<<<<<< HEAD
 function toggleEmojiPicker() {
     closeMediaToolsMenu();
     const emojiContainer = document.getElementById('emojiPickerContainer');
@@ -3765,32 +2853,6 @@ function toggleEmojiPicker() {
         }
     }
     emojiContainer.classList.toggle('hidden');
-=======
-// 1. Emoji Picker (loaded dynamically to avoid ESM database.js default-export error on some hosts)
-function initEmojiPicker() {
-    if (typeof window.loadEmojiPicker !== 'function') return;
-    window.loadEmojiPicker().then(function () {
-        const el = document.querySelector('emoji-picker');
-        if (el) {
-            el.addEventListener('emoji-click', function (event) {
-                if (messageInput) messageInput.value += event.detail.unicode;
-                toggleEmojiPicker();
-            });
-        }
-    });
-}
-initEmojiPicker();
-
-function insertQuickEmoji(emoji) {
-    if (messageInput) {
-        messageInput.value += emoji;
-        messageInput.focus();
-    }
-}
-
-function toggleEmojiPicker() {
-    document.getElementById('emojiPickerContainer').classList.toggle('hidden');
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     document.getElementById('gifPickerContainer').classList.add('hidden');
     document.getElementById('stickerPickerContainer').classList.add('hidden');
 }
@@ -3799,10 +2861,7 @@ function toggleEmojiPicker() {
 const TENOR_API_KEY = 'LIVDSRZULELA'; // Standard public test key
 
 function toggleGifPicker() {
-<<<<<<< HEAD
     closeMediaToolsMenu();
-=======
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     const gifContainer = document.getElementById('gifPickerContainer');
     gifContainer.classList.toggle('hidden');
     document.getElementById('emojiPickerContainer').classList.add('hidden');
@@ -3815,13 +2874,8 @@ function toggleGifPicker() {
 
 async function fetchGifs(query) {
     const url = query === 'trending'
-<<<<<<< HEAD
         ? `https://g.tenor.com/v1/trending?key=${TENOR_API_KEY}&limit=24`
         : `https://g.tenor.com/v1/search?q=${query}&key=${TENOR_API_KEY}&limit=24`;
-=======
-        ? `https://g.tenor.com/v1/trending?key=${TENOR_API_KEY}&limit=12`
-        : `https://g.tenor.com/v1/search?q=${query}&key=${TENOR_API_KEY}&limit=12`;
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 
     try {
         const response = await fetch(url);
@@ -3836,11 +2890,7 @@ async function fetchGifs(query) {
             img.className = 'picker-item gif-item';
             img.onclick = () => {
                 sendMessage('gif', imgUrl);
-<<<<<<< HEAD
                 closeAllPickers();
-=======
-                toggleGifPicker();
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
             };
             grid.appendChild(img);
         });
@@ -3856,7 +2906,6 @@ function searchGifs(event) {
     }, 500);
 }
 
-<<<<<<< HEAD
 // 3. Stickers (dynamic source via Tenor)
 let stickerTimeout = null;
 
@@ -3892,26 +2941,12 @@ async function fetchStickers(query) {
 
 function toggleStickerPicker() {
     closeMediaToolsMenu();
-=======
-// 3. Stickers
-const STICKERS = [
-    'https://raw.githubusercontent.com/googlefonts/noto-emoji/main/png/512/emoji_u1f600.png',
-    'https://raw.githubusercontent.com/googlefonts/noto-emoji/main/png/512/emoji_u1f618.png',
-    'https://raw.githubusercontent.com/googlefonts/noto-emoji/main/png/512/emoji_u1f4af.png',
-    'https://raw.githubusercontent.com/googlefonts/noto-emoji/main/png/512/emoji_u1f525.png',
-    'https://raw.githubusercontent.com/googlefonts/noto-emoji/main/png/512/emoji_u1f44d.png',
-    'https://raw.githubusercontent.com/googlefonts/noto-emoji/main/png/512/emoji_u1f389.png'
-];
-
-function toggleStickerPicker() {
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     const stickerContainer = document.getElementById('stickerPickerContainer');
     stickerContainer.classList.toggle('hidden');
     document.getElementById('emojiPickerContainer').classList.add('hidden');
     document.getElementById('gifPickerContainer').classList.add('hidden');
 
     const grid = document.getElementById('stickerGrid');
-<<<<<<< HEAD
     const stickerSearchInput = document.getElementById('stickerSearchInput');
     if (!stickerContainer.classList.contains('hidden') && grid && grid.innerHTML === '') {
         fetchStickers('trending');
@@ -3927,20 +2962,6 @@ function searchStickers(event) {
         const query = event?.target?.value?.trim() || '';
         fetchStickers(query || 'trending');
     }, 350);
-=======
-    if (grid.innerHTML === '') {
-        STICKERS.forEach(url => {
-            const img = document.createElement('img');
-            img.src = url;
-            img.className = 'picker-item sticker-item';
-            img.onclick = () => {
-                sendMessage('sticker', url);
-                toggleStickerPicker();
-            };
-            grid.appendChild(img);
-        });
-    }
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 }
 
 // 4. Voice Notes
@@ -3976,15 +2997,10 @@ async function startVoiceRecording() {
         };
 
         mediaRecorder.start();
-<<<<<<< HEAD
         const recordingIndicator = document.getElementById('recordingIndicator');
         if (recordingIndicator) recordingIndicator.classList.remove('hidden');
         const voiceBtn = document.getElementById('voiceBtn');
         if (voiceBtn) voiceBtn.style.background = '#ef4444';
-=======
-        document.getElementById('recordingIndicator').classList.remove('hidden');
-        document.getElementById('voiceBtn').style.background = '#ef4444';
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 
     } catch (err) {
         console.error("Microphone denied", err);
@@ -3994,15 +3010,10 @@ async function startVoiceRecording() {
 function stopVoiceRecording() {
     if (mediaRecorder && mediaRecorder.state === 'recording') {
         mediaRecorder.stop();
-<<<<<<< HEAD
         const recordingIndicator = document.getElementById('recordingIndicator');
         if (recordingIndicator) recordingIndicator.classList.add('hidden');
         const voiceBtn = document.getElementById('voiceBtn');
         if (voiceBtn) voiceBtn.style.background = '';
-=======
-        document.getElementById('recordingIndicator').classList.add('hidden');
-        document.getElementById('voiceBtn').style.background = '';
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     }
 }
 
@@ -4010,15 +3021,10 @@ function cancelVoiceRecording() {
     if (mediaRecorder && mediaRecorder.state === 'recording') {
         cancelPendingVoice = true;
         mediaRecorder.stop();
-<<<<<<< HEAD
         const recordingIndicator = document.getElementById('recordingIndicator');
         if (recordingIndicator) recordingIndicator.classList.add('hidden');
         const voiceBtn = document.getElementById('voiceBtn');
         if (voiceBtn) voiceBtn.style.background = '';
-=======
-        document.getElementById('recordingIndicator').classList.add('hidden');
-        document.getElementById('voiceBtn').style.background = '';
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     }
 }
 
@@ -4031,21 +3037,13 @@ let reconnectInterval = null;
 function showConnectionToast(partnerName) {
     const toast = document.createElement('div');
     toast.className = 'connection-toast';
-<<<<<<< HEAD
     toast.textContent = `Connected to ${partnerName}`;
-=======
-    toast.textContent = String(partnerName || 'Updated');
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 4000);
 }
 
 function showReconnectBanner(partnerName) {
-<<<<<<< HEAD
     showConnectionToast(partnerName);
-=======
-    showConnectionToast(`Connected to ${partnerName}`);
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
 
     const banner = document.getElementById('reconnectBanner');
     if (!banner) return;
@@ -4079,11 +3077,7 @@ function requestReconnect() {
     if (!currentSessionId) {
         hideReconnectBanner();
         socket.emit('reconnect_request');
-<<<<<<< HEAD
         updateWaitingUI('Attempting to reconnect...', 'Trying to restore your last chat.');
-=======
-        document.getElementById('waitingMessage').textContent = "Attempting to reconnect...";
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
         showWaitingScreen();
     }
 }

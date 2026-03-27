@@ -1,8 +1,4 @@
-node_modules/
-<<<<<<< HEAD
-public/noteai-notes/
-=======
-.next/
 .env
-.DS_Store
->>>>>>> d15c4d21d7788a0d467ee13ff7c6eaf594078490
+.npm-cache/
+node_modules/
+public/noteai-notes/
